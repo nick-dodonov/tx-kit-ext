@@ -1,0 +1,22 @@
+load("@rules_foreign_cc//foreign_cc:defs.bzl", "cmake")
+
+# Export all source files from the registry archive
+filegroup(
+    name = "all",
+    srcs = glob(["**"]),
+    visibility = ["//visibility:public"],
+)
+
+# Build lwlog using CMake as final target
+cmake(
+    name = "lwlog",
+    cache_entries = {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
+        "BUILD_SHARED_LIBS": "OFF",
+    },
+    lib_source = ":all",
+    out_static_libs = ["liblwlog_lib.a"],
+    out_include_dir = "include/lwlog",
+    visibility = ["//visibility:public"],
+)
