@@ -5,5 +5,8 @@
     "overlay": {
         "BUILD.bazel": "sha256-pdROS+Fn0sloYo+pFFIqhKmRRqMOEQivJjnMIZltw0w=",
         "MODULE.bazel": "sha256-ktr0L1PKsQ/bg7lwCxBerIXpnr2toud02tqrgzPuZtA="
+    },
+    "patches": {
+        "0001-emscripten-compile.patch": "sha256-hAJlpTSRfXfYgU/2bjGuGD6UUP88xN5ohp/e9kWTOMA="
     }
 }
