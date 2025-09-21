@@ -10,13 +10,24 @@ filegroup(
 # Build lwlog using CMake as final target
 cmake(
     name = "lwlog",
-    cache_entries = {
-        "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_POSITION_INDEPENDENT_CODE": "ON",
-        "BUILD_SHARED_LIBS": "OFF",
-    },
+    cache_entries = select({
+        "@platforms//cpu:wasm32": {
+            "CMAKE_SYSTEM_NAME": "Emscripten",
+        },
+        "//conditions:default": {},
+    }),
+    # Disable Bazel's generated cross-compilation toolchain file for WASM
+    generate_crosstool_file = select({
+        "@platforms//cpu:wasm32": False,
+        "//conditions:default": True,
+    }),
     lib_source = ":all",
     out_static_libs = ["liblwlog_lib.a"],
     out_include_dir = "include/lwlog",
+    # Only build the library target, not executables
+    targets = select({
+        "@platforms//cpu:wasm32": ["lwlog_lib"],
+        "//conditions:default": [],  # Build all targets by default
+    }),
     visibility = ["//visibility:public"],
 )

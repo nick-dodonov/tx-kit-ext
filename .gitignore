@@ -1,2 +1,13 @@
 # Bazel
 MODULE.bazel.lock
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+
+# OS
+.DS_Store
+Thumbs.db
