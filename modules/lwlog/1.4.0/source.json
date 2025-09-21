@@ -8,5 +8,6 @@
     },
     "patches": {
         "0001-emscripten-compile.patch": "sha256-hAJlpTSRfXfYgU/2bjGuGD6UUP88xN5ohp/e9kWTOMA="
-    }
+    },
+    "patch_strip": 1
 }
