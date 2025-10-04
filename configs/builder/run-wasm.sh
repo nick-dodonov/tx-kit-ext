@@ -1,8 +1,12 @@
 #!/bin/bash
-# Простой скрипт для запуска WASM demo через emrun
-set -e
+# Simple script to run WASM build via node or emrun
+green="\033[32m"
+red="\033[31m"
+yellow="\033[1;33m"
+light_blue="\033[1;34m"
+reset="\033[0m"
 
-echo "WASM Runner input:"
+echo -e "${yellow}🚀 WASM Runner:${reset}"
 #env
 echo "  cwd: $(pwd)"
 echo "  exe: $0"
@@ -18,7 +22,7 @@ elif test "${RUNFILES_DIR+x}"; then
     cd $RUNFILES_DIR
 fi
 if [ $# -lt 1 ]; then
-    echo "usage: $0 <html|wasm> <args>"
+    echo "Usage: $0 <html|wasm> <args>"
     exit 1
 fi
 
@@ -57,8 +61,8 @@ if [ ! -f "$_FILE" ]; then
 fi
 
 # Check if we're in test mode (BAZEL_TEST is set but BUILD_WORKING_DIRECTORY is not)
-if test "${BAZEL_TEST+x}" && ! test "${BUILD_WORKING_DIRECTORY+x}"; then
-    echo "WASM Runner Node.js (test mode):"
+if true; then #test "${BAZEL_TEST+x}" && ! test "${BUILD_WORKING_DIRECTORY+x}"; then
+    echo -e "${yellow}🚀 Test mode (via node):${reset}"
     echo "  cwd: $(pwd)"
     echo "  html: $_FILE"
     
@@ -71,13 +75,12 @@ if test "${BAZEL_TEST+x}" && ! test "${BUILD_WORKING_DIRECTORY+x}"; then
         fi
         _CMD="node $_JS_FILE $*"
         echo "  cmd: $_CMD"
-        $_CMD
     else
         echo "Error: JavaScript file not found: $_JS_FILE"
         exit 1
     fi
 else
-    echo "WASM Runner emrun:"
+    echo -e "${yellow}🚀 Run mode (via emrun):${reset}"
     echo "  cwd: $(pwd)"
     echo "  html: $_FILE"
     if [ $# -gt 0 ]; then
@@ -85,5 +88,16 @@ else
     fi
     _CMD="emrun --kill_start --kill_exit --browser=chrome --browser_args=-headless $_FILE $*"
     echo "  cmd: $_CMD"
-    $_CMD
 fi
+
+echo -e "${light_blue}>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>${reset}"
+$_CMD
+exitcode=$?
+echo -e "${light_blue}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<${reset}"
+
+if [ "$exitcode" -eq 0 ]; then
+    echo -e "${green}✅ Success: $exitcode${reset}"
+else
+    echo -e "${red}❌ Error: $exitcode${reset}"
+fi
+exit $exitcode
