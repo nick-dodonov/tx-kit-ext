@@ -1,5 +1,10 @@
 # Bazel
+/bazel-*
 MODULE.bazel.lock
+.*.bazelrc
+
+# Native debugging customizations
+/.lldbinit
 
 # Python
 __pycache__/
@@ -8,6 +13,9 @@ __pycache__/
 venv/
 .venv/
 
-# OS
+# OS/caches/temp files
 .DS_Store
 Thumbs.db
+*.bak
+*.tmp
+*.log
