@@ -25,7 +25,6 @@ jobs:
     permissions:
       contents: write # to allow pushing branches
       pull-requests: write # to allow creating pull requests
-      workflows: write # to allow modifying workflow files
     steps:
       - name: Backporting
         uses: kiegroup/git-backporting@v4.8.6
