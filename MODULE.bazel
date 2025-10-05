@@ -14,3 +14,6 @@ bazel_dep(name = "rules_shell", version = "0.6.1")
 
 # WASM support
 bazel_dep(name = "emsdk", version = "4.0.13")
+
+# Tools dependencies
+bazel_dep(name = "rules_python", version = "1.6.3")

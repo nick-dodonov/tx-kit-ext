@@ -1,0 +1,1 @@
+print('⚙️ dev: init tool')
