@@ -1,5 +1,7 @@
 # Bazel
+/bazel-*
 MODULE.bazel.lock
+.*.bazelrc
 
 # Python
 __pycache__/
