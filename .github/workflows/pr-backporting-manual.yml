@@ -22,14 +22,14 @@ jobs:
   backporting:
     name: "Backporting"
     runs-on: ubuntu-latest
-    permissions:
-      contents: write # to allow pushing branches
-      pull-requests: write # to allow creating pull requests
+    # permissions: # only for embedded secrets.GITHUB_TOKEN
+    #   contents: write # to allow pushing branches
+    #   pull-requests: write # to allow creating pull requests
     steps:
       - name: Backporting
         uses: kiegroup/git-backporting@v4.8.6
         with:
           target-branch: ${{ inputs.targetBranch }}
           pull-request: ${{ inputs.pullRequest }}
-          auth: ${{ secrets.GITHUB_TOKEN }}
+          auth: ${{ secrets.GH_TOKEN_WORKFLOW_WRITE }}
           dry-run: ${{ inputs.dryRun }}
