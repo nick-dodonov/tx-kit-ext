@@ -15,13 +15,16 @@ on:
       dryRun:
         description: 'Dry run'
         required: false
-        default: "true" 
+        default: "false" 
         type: string
 
 jobs:
   backporting:
     name: "Backporting"
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # to allow pushing branches
+      pull-requests: write # to allow creating pull requests
     steps:
       - name: Backporting
         uses: kiegroup/git-backporting@v4.8.6
