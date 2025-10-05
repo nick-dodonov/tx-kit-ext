@@ -1,0 +1,24 @@
+# Default Bazel configuration for development.
+# You can uncomment or change settings here as needed.
+# Force regeneration: bazel run @tx-kit-repo//tools/dev:init --force
+
+#TODO: fill more useful flags (profiling, etc); disable most by default but allow uncomment one line to enable (just like system-tools)
+
+build:wasm --platforms=@emsdk//:platform_wasm
+build:system-tools --extra_toolchains=@rules_foreign_cc//toolchains:preinstalled_cmake_toolchain
+build:system-tools --extra_toolchains=@rules_foreign_cc//toolchains:preinstalled_make_toolchain
+build:system-tools --extra_toolchains=@rules_foreign_cc//toolchains:preinstalled_ninja_toolchain
+build:system-tools --extra_toolchains=@rules_foreign_cc//toolchains:preinstalled_pkgconfig_toolchain
+build:system-tools --action_env=PATH
+build:system-tools --host_action_env=PATH
+build --config=system-tools
+
+build -c dbg
+#build --announce_rc
+#build --subcommands
+build --verbose_failures
+build --spawn_strategy=local
+build --copt=-ffile-compilation-dir=.
+
+#common --override_module=tx-kit-repo=../tx-kit-repo
+#common --override_module=tx-pkg-aux=../tx-pkg-aux
