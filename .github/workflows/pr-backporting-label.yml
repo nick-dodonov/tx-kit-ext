@@ -19,16 +19,29 @@ jobs:
       github.event.pull_request.merged
       && (
         github.event.action == 'closed'
-          && contains(github.event.pull_request.labels.*.name, 'backport-v1')
+          && contains(toJSON(github.event.pull_request.labels.*.name), 'backport-')
         || (
           github.event.action == 'labeled'
-          && contains(github.event.label.name, 'backport-v1')
+          && startsWith(github.event.label.name, 'backport-')
         )
       )
     runs-on: ubuntu-latest
     steps:
+      - name: Extract target branch
+        id: extract-branch
+        run: |
+          if [[ "${{ github.event.action }}" == "labeled" ]]; then
+            LABEL="${{ github.event.label.name }}"
+          else
+            # Find the first backport label when PR is closed
+            LABEL=$(echo "${{ toJSON(github.event.pull_request.labels.*.name) }}" | jq -r '.[] | select(startswith("backport-")) | first')
+          fi
+          TARGET=${LABEL#backport-}
+          echo "Target branch: $TARGET"
+          echo "target=$TARGET" >> $GITHUB_OUTPUT
+
       - name: Backporting
         uses: kiegroup/git-backporting@main
         with:
-          target-branch: v1
+          target-branch: release/${{ steps.extract-branch.outputs.target }}
           pull-request: ${{ github.event.pull_request.url }}
