@@ -10,6 +10,9 @@ __pycache__/
 venv/
 .venv/
 
-# OS
+# OS/caches/temp files
 .DS_Store
 Thumbs.db
+*.bak
+*.tmp
+*.log

@@ -5,7 +5,9 @@ py_binary(
     srcs = ["init.py"],
     data = [
         # template files as data dependencies
-        "default.user.bazelrc",
+        "default.dev.bazelrc",
+        "default.dev.lldbinit",
+        "default.user.lldbinit",
     ],
     deps = [
         "@pypi//termcolor",
