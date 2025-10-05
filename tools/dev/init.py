@@ -3,6 +3,14 @@
 Initialize developer environment for tx bazel repo.
 Handles configuration file setup and workspace initialization.
 """
+#TODO: find local tools to simplify local-tools setup
+#build --action_env=MAKE=/usr/bin/make
+#build --action_env=CMAKE=/usr/local/bin/cmake
+#build --action_env=PKG_CONFIG=/usr/local/bin/pkg-config
+#build --action_env=NINJA=/usr/local/bin/ninja
+#build --action_env=EMSDK=/Users/nik/emsdk
+#build --action_env=EMSCRIPTEN_ROOT=/Users/nik/emsdk/upstream/emscripten
+#build --action_env=EM_CACHE=/Users/nik/emsdk/upstream/emscripten/cache
 
 import os
 import sys
