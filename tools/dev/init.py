@@ -100,6 +100,19 @@ def setup_dev_bazelrc(workspace_root: Path, force: bool = False) -> None:
         force: Whether to force overwrite existing files
     """
     workspace_bazelrc = '.dev.bazelrc'
+
+    # Validate that workspace .bazelrc exists and try-include .dev.bazelrc
+    bazelrc_path = workspace_root / '.bazelrc'
+    if not bazelrc_path.exists():
+        print(colored('⚠️  Warning:', 'yellow'), f'Workspace root \'.bazelrc\' not found at {bazelrc_path}')
+    else:
+        bazelrc_content = bazelrc_path.read_text()
+        try_import_line = f'try-import %workspace%/{workspace_bazelrc}'
+        if try_import_line not in bazelrc_content:
+            print(colored('⚠️  Warning:', 'yellow'), f'\'.bazelrc\' does not include \'{try_import_line}\'')
+            print(f'💡 Add the following line to your {bazelrc_path}:')
+            print(colored(f'    {try_import_line}', 'cyan'))
+
     workspace_bazelrc_path = workspace_root / workspace_bazelrc
     default_bazelrc_path = Path(__file__).parent / 'default.dev.bazelrc'
     setup_config_file(workspace_bazelrc_path, default_bazelrc_path, force)

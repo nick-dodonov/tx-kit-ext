@@ -3,6 +3,9 @@
 MODULE.bazel.lock
 .*.bazelrc
 
+# Native debugging customizations
+/.lldbinit
+
 # Python
 __pycache__/
 *.py[cod]
