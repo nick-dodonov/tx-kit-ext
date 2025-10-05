@@ -1,6 +1,9 @@
 # Generated Bazel configuration for development.
 # You can uncomment or change settings here as needed.
 # Force regenerate: bazel run @tx-kit-repo//tools/dev:init -- -f
+# Useful links:
+# - https://bazel.build/reference/command-line-reference
+# - https://bazel.build/reference/flag-cheatsheet
 
 #### Quick setup
 # build --enable_platform_specific_config
