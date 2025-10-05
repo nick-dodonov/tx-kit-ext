@@ -29,6 +29,17 @@ fi
 _FILE="$1"
 shift
 
+# Check if next argument is --emrun or -e
+_EMRUN=false
+if [ "$1" = "--emrun" ] || [ "$1" = "-e" ]; then
+    _EMRUN=true
+    shift
+    if test "${BAZEL_TEST+x}" && ! test "${BUILD_WORKING_DIRECTORY+x}"; then
+        echo -e "${red}❌ Error: --emrun cannot be used in test mode${reset}"
+        exit 1
+    fi
+fi
+
 _FILE="${_FILE%.*}.html"
 
 # Try to find the HTML file in multiple locations
@@ -61,7 +72,7 @@ if [ ! -f "$_FILE" ]; then
 fi
 
 # Check if we're in test mode (BAZEL_TEST is set but BUILD_WORKING_DIRECTORY is not)
-if true; then #test "${BAZEL_TEST+x}" && ! test "${BUILD_WORKING_DIRECTORY+x}"; then
+if [ "$_EMRUN" = false ]; then
     echo -e "${yellow}🚀 Test mode (via node):${reset}"
     echo "  cwd: $(pwd)"
     echo "  html: $_FILE"
