@@ -10,9 +10,11 @@ module(
 ################################################################
 
 # Build rules dependencies
-# apple_support makes `dsymutil -s bazel-bin/demo/hello-pkg` paths relative - deterministic and simplify debug setup
-# build --features=oso_prefix_is_pwd seems doesn't works (https://keith.github.io/xcode-man-pages/ld.1.html#oso_prefix)
-# can be replaced w/ build --copt=-ffile-compilation-dir=.
+# Dep "apple_support" must be included before `rules_cc` https://github.com/bazelbuild/apple_support
+# It makes `dsymutil -s <exe> && dwarfdump <obj|a>` paths relative,
+#   for deterministic build and simplifing debug setup.
+#   --features=oso_prefix_is_pwd seems doesn't works https://keith.github.io/xcode-man-pages/ld.1.html#oso_prefix
+#   can be replaced w/ other flags, e.g. --copt=-ffile-compilation-dir=. --linkopt=-Wl,-oso_prefix,
 bazel_dep(name = "apple_support", version = "1.23.1")
 bazel_dep(name = "platforms", version = "1.0.0")
 bazel_dep(name = "rules_cc", version = "0.2.8")
