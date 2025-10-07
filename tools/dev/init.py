@@ -23,6 +23,11 @@ def parse_args() -> argparse.Namespace:
         action='store_true',
         help='Force regeneration of config files'
     )
+    parser.add_argument(
+        '-d', '--dryrun',
+        action='store_true',
+        help='Show what would be created/modified without making any changes'
+    )
     return parser.parse_args()
 
 def find_workspace_root() -> Path:
@@ -46,16 +51,18 @@ def find_workspace_root() -> Path:
     
     return workspace_root
 
-def create_config(target_path: Path, default_path: Path) -> None:
+def create_config(target_path: Path, default_path: Path, dryrun: bool = False) -> None:
     """
     Create a config file by copying the default template.
     
     Args:
         target_path: Path where the config should be created
         default_path: Path to the default template file
+        dryrun: If True, only show what would be done without making changes
     """
-    print(f'⚙️  Creating: {target_path}')
-    target_path.write_text(default_path.read_text())
+    print(f'⚙️  {"Would create" if dryrun else "Creating"}: {target_path}')
+    if not dryrun:
+        target_path.write_text(default_path.read_text())
 
 def backup_file(file_path: Path) -> Path:
     """
@@ -72,7 +79,7 @@ def backup_file(file_path: Path) -> Path:
     file_path.rename(backup_path)
     return backup_path
 
-def setup_config_file(target_path: Path, template_path: Path, force: bool = False) -> None:
+def setup_config_file(target_path: Path, template_path: Path, force: bool = False, dryrun: bool = False) -> None:
     """
     Set up a configuration file from a template, handling backups if needed.
     
@@ -80,26 +87,31 @@ def setup_config_file(target_path: Path, template_path: Path, force: bool = Fals
         target_path: Path where the config file should be created
         template_path: Path to the template file
         force: Whether to force overwrite existing files
+        dryrun: If True, only show what would be done without making changes
     """
     if target_path.exists():
         if force:
-            print(f'⚙️  Overwriting existing \'{target_path.name}\' due to --force flag')
-            backup_path = backup_file(target_path)
-            print(f'⚙️  Backed up existing \'{target_path.name}\' to {backup_path}')
-            create_config(target_path, template_path)
+            print(f'⚙️  {"Would overwrite" if dryrun else "Overwriting"} existing \'{target_path.name}\' due to --force flag')
+            if not dryrun:
+                backup_path = backup_file(target_path)
+                print(f'⚙️  Backed up existing \'{target_path.name}\' to {backup_path}')
+            else:
+                print(f'⚙️  Would backup existing \'{target_path.name}\'')
+            create_config(target_path, template_path, dryrun)
         else:
             print(colored(f'⚠️  Warning:', 'yellow'),
                   f'\'{target_path.name}\' already exists, skipping creation at {target_path}')
     else:
-        create_config(target_path, template_path)
+        create_config(target_path, template_path, dryrun)
 
-def setup_dev_bazelrc(workspace_root: Path, force: bool = False) -> None:
+def setup_dev_bazelrc(workspace_root: Path, force: bool = False, dryrun: bool = False) -> None:
     """
     Set up the dev's bazelrc file, handling backups if needed.
     
     Args:
         workspace_root: Path to the workspace root
         force: Whether to force overwrite existing files
+        dryrun: If True, only show what would be done without making changes
     """
     workspace_bazelrc = '.dev.bazelrc'
 
@@ -117,25 +129,26 @@ def setup_dev_bazelrc(workspace_root: Path, force: bool = False) -> None:
 
     workspace_bazelrc_path = workspace_root / workspace_bazelrc
     default_bazelrc_path = Path(__file__).parent / 'default.dev.bazelrc'
-    setup_config_file(workspace_bazelrc_path, default_bazelrc_path, force)
+    setup_config_file(workspace_bazelrc_path, default_bazelrc_path, force, dryrun)
 
-def setup_lldbinit(workspace_root: Path, force: bool = False) -> None:
+def setup_lldbinit(workspace_root: Path, force: bool = False, dryrun: bool = False) -> None:
     """
     Set up LLDB initialization files.
     
     Args:
         workspace_root: Path to the workspace root
         force: Whether to force overwrite existing files
+        dryrun: If True, only show what would be done without making changes
     """
     # Setup user's .lldbinit in $HOME
     user_lldbinit_path = Path.home() / '.lldbinit'
     default_user_lldbinit_path = Path(__file__).parent / 'default.user.lldbinit'
-    setup_config_file(user_lldbinit_path, default_user_lldbinit_path, force)
+    setup_config_file(user_lldbinit_path, default_user_lldbinit_path, force, dryrun)
 
     # Setup workspace .lldbinit
     workspace_lldbinit_path = workspace_root / '.lldbinit'
     default_workspace_lldbinit_path = Path(__file__).parent / 'default.dev.lldbinit'
-    setup_config_file(workspace_lldbinit_path, default_workspace_lldbinit_path, force)
+    setup_config_file(workspace_lldbinit_path, default_workspace_lldbinit_path, force, dryrun)
 
 def main() -> None:
     """Main entry point for the initialization script."""
@@ -145,12 +158,16 @@ def main() -> None:
     workspace_root = find_workspace_root()
     print(f'📂 Detected bazel workspace: {workspace_root}')
 
+    if args.dryrun:
+        print(colored('🔍 Dry run:', 'blue'),
+              'showing what would be done without making changes.')
+
     if args.force:
         print(colored('⚠️  Warning:', 'yellow'),
-              'Force flag is set. Existing files will be overwritten.')
+              'Force flag is set, existing files will be overwritten.')
 
-    setup_dev_bazelrc(workspace_root, args.force)
-    setup_lldbinit(workspace_root, args.force)
+    setup_dev_bazelrc(workspace_root, args.force, args.dryrun)
+    setup_lldbinit(workspace_root, args.force, args.dryrun)
     
     print(colored('✅ Initialization done', 'light_green'))
 
