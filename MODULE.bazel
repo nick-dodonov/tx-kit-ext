@@ -1,4 +1,4 @@
-"""Defines the tx-kit-repo Bazel module (shared extensions and rules)."""
+"""Bazel module for shared extensions, tools and rules."""
 
 module(
     name = "tx-kit-repo",
