@@ -8,5 +8,5 @@ setting append target.source-map /Users/nik/p/t/tx/tx-pkg-misc/external /Users/n
 #TODO: Auto target.source-map to real externals (local --override_module) instead of symlinked ones
 
 # command alias reload command source .lldbinit
-# command script import $(bazel info output_base)/external/tx-kit-repo+/tools/dev/my_commands.py
+# command script import $(bazel info output_base)/external/tx-kit-ext+/tools/dev/my_commands.py
 # command script add -f my_commands.printworld hello

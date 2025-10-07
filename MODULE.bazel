@@ -1,7 +1,7 @@
 """Bazel module for shared extensions, tools and rules."""
 
 module(
-    name = "tx-kit-repo",
+    name = "tx-kit-ext",
     version = "0.0.0",
 )
 
