@@ -3,14 +3,8 @@
 Initialize developer environment for tx bazel repo.
 Handles configuration file setup and workspace initialization.
 """
-#TODO: find local tools to simplify local-tools setup
-#build --action_env=MAKE=/usr/bin/make
-#build --action_env=CMAKE=/usr/local/bin/cmake
-#build --action_env=PKG_CONFIG=/usr/local/bin/pkg-config
-#build --action_env=NINJA=/usr/local/bin/ninja
-#build --action_env=EMSDK=/Users/nik/emsdk
-#build --action_env=EMSCRIPTEN_ROOT=/Users/nik/emsdk/upstream/emscripten
-#build --action_env=EM_CACHE=/Users/nik/emsdk/upstream/emscripten/cache
+#TODO: find and setup tools in .dev.bazelr to simplify local-tools configuration: 
+#   --action_env for MAKE CMAKE PKG_CONFIG NINJA EMSDK EMSCRIPTEN_ROOT EM_CACHE
 
 import os
 import sys
@@ -52,15 +46,15 @@ def find_workspace_root() -> Path:
     
     return workspace_root
 
-def create_dev_bazelrc(target_path: Path, default_path: Path) -> None:
+def create_config(target_path: Path, default_path: Path) -> None:
     """
-    Create a dev bazelrc file by copying the default template.
+    Create a config file by copying the default template.
     
     Args:
-        target_path: Path where the dev bazelrc should be created
+        target_path: Path where the config should be created
         default_path: Path to the default template file
     """
-    print(f'⚙️  Creating dev bazelrc: {target_path}')
+    print(f'⚙️  Creating: {target_path}')
     target_path.write_text(default_path.read_text())
 
 def backup_file(file_path: Path) -> Path:
@@ -92,12 +86,12 @@ def setup_config_file(target_path: Path, template_path: Path, force: bool = Fals
             print(f'⚙️  Overwriting existing \'{target_path.name}\' due to --force flag')
             backup_path = backup_file(target_path)
             print(f'⚙️  Backed up existing \'{target_path.name}\' to {backup_path}')
-            create_dev_bazelrc(target_path, template_path)
+            create_config(target_path, template_path)
         else:
             print(colored(f'⚠️  Warning:', 'yellow'),
                   f'\'{target_path.name}\' already exists, skipping creation at {target_path}')
     else:
-        create_dev_bazelrc(target_path, template_path)
+        create_config(target_path, template_path)
 
 def setup_dev_bazelrc(workspace_root: Path, force: bool = False) -> None:
     """
