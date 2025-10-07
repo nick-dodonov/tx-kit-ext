@@ -1,8 +1,0 @@
-"""Module definition for lwlog library."""
-module(name = "lwlog", version = "1.4.0-patch.2")
-
-bazel_dep(name = "rules_foreign_cc", version = "0.15.0")
-bazel_dep(name = "platforms", version = "0.0.10")
-
-# Может быть через @bazel_tools//tools/build_defs/repo:git.bzl можно расширить состав автоматически загружаемого репозитория lwlog
-# (который объявлен в source.json)?

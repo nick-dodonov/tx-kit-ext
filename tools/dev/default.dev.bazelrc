@@ -1,6 +1,6 @@
 # Generated Bazel configuration for development.
 # You can uncomment or change settings here as needed.
-# Force regenerate: bazel run @tx-kit-repo//tools/dev:init -- -f
+# Force regenerate: bazel run @tx-kit-ext//tools/dev:init -- -f
 # Useful links:
 # - https://bazel.build/reference/command-line-reference
 # - https://bazel.build/reference/flag-cheatsheet
@@ -12,8 +12,9 @@
 # build --config=wasm
 
 #### Dependencies overrides
-# common --override_module=tx-kit-repo=../tx-kit-repo
+# common --override_module=tx-kit-ext=../tx-kit-ext
 # common --override_module=tx-pkg-aux=../tx-pkg-aux
+# common --override_module=tx-pkg-misc=../tx-pkg-misc
 
 #### Progress and diagnostics
 # build --announce_rc

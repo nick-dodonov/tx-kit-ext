@@ -1,9 +1,0 @@
-# preinstalled/prebuilt system tools
-# foreign_cc = use_extension("@rules_foreign_cc//foreign_cc:extensions.bzl", "tools")
-# foreign_cc.cmake(version = "3.31.7")
-# foreign_cc.ninja(version = "1.13.0")
-
-# single_version_override(
-#     module_name = "lwlog",
-#     registry = "https://raw.githubusercontent.com/nick-dodonov/tx-kit-repo/main",
-# )

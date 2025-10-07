@@ -1,1 +1,12 @@
-#TODO: settings set target.source-map . ${workspace}
+script import os, datetime; print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] Loading {os.getcwd()}/.lldbinit")
+
+#TODO: Workaround for Bazel 8 default build location of external deps (CLion lldb edition that builds w/o relatives)
+#   Need to adopt to shared for targets and packages
+#setting append target.source-map . /Users/nik/p/t/tx/tx-pkg-misc
+#setting append target.source-map external /Users/nik/p/t/tx/tx-pkg-misc/bazel-tx-pkg-misc/external
+setting append target.source-map /Users/nik/p/t/tx/tx-pkg-misc/external /Users/nik/p/t/tx/tx-pkg-misc/bazel-tx-pkg-misc/external
+#TODO: Auto target.source-map to real externals (local --override_module) instead of symlinked ones
+
+# command alias reload command source .lldbinit
+# command script import $(bazel info output_base)/external/tx-kit-ext+/tools/dev/my_commands.py
+# command script add -f my_commands.printworld hello
