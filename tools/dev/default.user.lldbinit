@@ -1,4 +1,2 @@
 settings set target.load-cwd-lldbinit true
-
-# https://lldb.llvm.org/python_api/lldb.SBDebugger.html
-script import datetime; print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] Loaded ~/.lldbinit, debugger version:\n{lldb.debugger.GetVersionString()}")
+script import datetime; print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] === Load ~/.lldbinit, debugger version:\n{lldb.debugger.GetVersionString()}")
