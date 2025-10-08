@@ -21,11 +21,7 @@ def lldb_cmd(command):
     lldb.debugger.HandleCommand(command)
 
 def setup_target_source_map():
-    '''
-    Setup Bazel externals source mapping for current target.
-    - Add relative path mapping for builds compiled/linked with -ffile-compilation-dir=. and/or --linkopt=-Wl,-oso_prefix,
-    - Add absolute path mapping for another build variants (e.g. CLion's Bazel plugin build overrides setup).
-    '''
+    '''Setup Bazel source mapping for current target.'''
     target = lldb.debugger.GetSelectedTarget()
     if target:
         print(f"""target: 
@@ -41,10 +37,14 @@ def setup_target_source_map():
 
     external_dst = f'{output_base}/external'
 
-    #TODO: adopt to realpaths of specific externals instead of symlinked ones in output_base (local --override_module)
     source_map = {
+        # С/С++ extension debugger (cppdbg) in VSCode doesn't add working dir to source map
+        ".": current_dir,
+        # Relative path mapping for builds compiled/linked with -ffile-compilation-dir=. and/or --linkopt=-Wl,-oso_prefix,
         "external": external_dst,
+        # Absolute path mapping for another build variants (e.g. CLion's Bazel plugin build overrides setup)
         f'{current_dir}/external': external_dst,
+        #TODO: adopt to realpaths of specific externals instead of symlinked ones in output_base (local --override_module)
     }
 
     for src, dst in source_map.items():
