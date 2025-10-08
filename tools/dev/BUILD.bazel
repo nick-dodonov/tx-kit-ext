@@ -8,7 +8,7 @@ py_binary(
         "default.dev.bazelrc",
         "default.dev.lldbinit",
         "default.user.lldbinit",
-    ],
+    ] + glob([".lldb/**"]),
     deps = [
         "@pypi//termcolor",
     ],

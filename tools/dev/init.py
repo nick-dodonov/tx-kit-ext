@@ -3,19 +3,14 @@
 Initialize developer environment for tx bazel repo.
 Handles configuration file setup and workspace initialization.
 """
-#TODO: find local tools to simplify local-tools setup
-#build --action_env=MAKE=/usr/bin/make
-#build --action_env=CMAKE=/usr/local/bin/cmake
-#build --action_env=PKG_CONFIG=/usr/local/bin/pkg-config
-#build --action_env=NINJA=/usr/local/bin/ninja
-#build --action_env=EMSDK=/Users/nik/emsdk
-#build --action_env=EMSCRIPTEN_ROOT=/Users/nik/emsdk/upstream/emscripten
-#build --action_env=EM_CACHE=/Users/nik/emsdk/upstream/emscripten/cache
+#TODO: find and setup tools in .dev.bazelr to simplify local-tools configuration: 
+#   --action_env for MAKE CMAKE PKG_CONFIG NINJA EMSDK EMSCRIPTEN_ROOT EM_CACHE
 
 import os
 import sys
 import datetime
 import argparse
+import shutil
 from pathlib import Path
 from termcolor import colored  # TODO: use colorama for windows support
 
@@ -28,6 +23,16 @@ def parse_args() -> argparse.Namespace:
         '-f', '--force',
         action='store_true',
         help='Force regeneration of config files'
+    )
+    parser.add_argument(
+        '-d', '--dryrun',
+        action='store_true',
+        help='Show what would be created/modified without making any changes'
+    )
+    parser.add_argument(
+        '-s', '--symlink',
+        action='store_true',
+        help='Create symbolic links to config files instead of copying them'
     )
     return parser.parse_args()
 
@@ -52,16 +57,35 @@ def find_workspace_root() -> Path:
     
     return workspace_root
 
-def create_dev_bazelrc(target_path: Path, default_path: Path) -> None:
+def create_symlink(target_path: Path, default_path: Path, dryrun: bool = False) -> None:
     """
-    Create a dev bazelrc file by copying the default template.
+    Create a symbolic link to the default template.
     
     Args:
-        target_path: Path where the dev bazelrc should be created
-        default_path: Path to the default template file
+        target_path: Path where the symlink should be created
+        default_path: Path to the default template file to link to
+        dryrun: If True, only show what would be done without making changes
     """
-    print(f'⚙️  Creating dev bazelrc: {target_path}')
-    target_path.write_text(default_path.read_text())
+    print(f'⚙️  {"Would create symlink" if dryrun else "Creating symlink"}: {target_path} -> {default_path.resolve()}')
+    if not dryrun:
+        target_path.symlink_to(default_path.resolve())
+
+def create_config(target_path: Path, default_path: Path, dryrun: bool = False, use_symlink: bool = False) -> None:
+    """
+    Create a config file by copying the default template or creating a symlink.
+    
+    Args:
+        target_path: Path where the config should be created
+        default_path: Path to the default template file
+        dryrun: If True, only show what would be done without making changes
+        use_symlink: If True, create a symbolic link instead of copying
+    """
+    if use_symlink:
+        create_symlink(target_path, default_path, dryrun)
+    else:
+        print(f'⚙️  {"Would create" if dryrun else "Creating"}: {target_path}')
+        if not dryrun:
+            target_path.write_text(default_path.read_text())
 
 def backup_file(file_path: Path) -> Path:
     """
@@ -78,7 +102,23 @@ def backup_file(file_path: Path) -> Path:
     file_path.rename(backup_path)
     return backup_path
 
-def setup_config_file(target_path: Path, template_path: Path, force: bool = False) -> None:
+
+def backup_item(item_path: Path) -> Path:
+    """
+    Create a timestamped backup of a file or directory by renaming it next to the original.
+
+    Args:
+        item_path: Path to the file or directory to backup
+
+    Returns:
+        Path: Path to the backup item
+    """
+    timestamp = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
+    backup_path = item_path.with_name(f'{item_path.name}.{timestamp}.bak')
+    item_path.rename(backup_path)
+    return backup_path
+
+def setup_config_file(target_path: Path, template_path: Path, force: bool = False, dryrun: bool = False, use_symlink: bool = False) -> None:
     """
     Set up a configuration file from a template, handling backups if needed.
     
@@ -86,26 +126,32 @@ def setup_config_file(target_path: Path, template_path: Path, force: bool = Fals
         target_path: Path where the config file should be created
         template_path: Path to the template file
         force: Whether to force overwrite existing files
+        dryrun: If True, only show what would be done without making changes
+        use_symlink: If True, create a symbolic link instead of copying
     """
     if target_path.exists():
         if force:
-            print(f'⚙️  Overwriting existing \'{target_path.name}\' due to --force flag')
-            backup_path = backup_file(target_path)
-            print(f'⚙️  Backed up existing \'{target_path.name}\' to {backup_path}')
-            create_dev_bazelrc(target_path, template_path)
+            print(f'⚙️  {"Would overwrite" if dryrun else "Overwriting"} existing \'{target_path.name}\' due to --force flag')
+            if not dryrun:
+                backup_path = backup_file(target_path)
+                print(f'⚙️  Backed up existing \'{target_path.name}\' to {backup_path}')
+            else:
+                print(f'⚙️  Would backup existing \'{target_path.name}\'')
+            create_config(target_path, template_path, dryrun, use_symlink)
         else:
             print(colored(f'⚠️  Warning:', 'yellow'),
                   f'\'{target_path.name}\' already exists, skipping creation at {target_path}')
     else:
-        create_dev_bazelrc(target_path, template_path)
+        create_config(target_path, template_path, dryrun, use_symlink)
 
-def setup_dev_bazelrc(workspace_root: Path, force: bool = False) -> None:
+def setup_dev_bazelrc(workspace_root: Path, force: bool = False, dryrun: bool = False, use_symlink: bool = False) -> None:
     """
     Set up the dev's bazelrc file, handling backups if needed.
     
     Args:
         workspace_root: Path to the workspace root
         force: Whether to force overwrite existing files
+        dryrun: If True, only show what would be done without making changes
     """
     workspace_bazelrc = '.dev.bazelrc'
 
@@ -123,25 +169,76 @@ def setup_dev_bazelrc(workspace_root: Path, force: bool = False) -> None:
 
     workspace_bazelrc_path = workspace_root / workspace_bazelrc
     default_bazelrc_path = Path(__file__).parent / 'default.dev.bazelrc'
-    setup_config_file(workspace_bazelrc_path, default_bazelrc_path, force)
+    setup_config_file(workspace_bazelrc_path, default_bazelrc_path, force, dryrun, use_symlink)
 
-def setup_lldbinit(workspace_root: Path, force: bool = False) -> None:
+
+def setup_directory(target_dir: Path, template_dir: Path, force: bool = False, dryrun: bool = False, use_symlink: bool = False) -> None:
     """
-    Set up LLDB initialization files.
+    Set up a directory by copying from a template directory or creating a symlink.
+
+    Args:
+        target_dir: Path where the directory should be created
+        template_dir: Path to the template directory
+        force: Whether to force overwrite existing
+        dryrun: If True, only show what would be done without making changes
+        use_symlink: If True, create a symbolic link instead of copying
+    """
+    if not template_dir.exists() or not template_dir.is_dir():
+        print(colored('⚠️  Warning:', 'yellow'), f'Template directory not found or not a directory: {template_dir}')
+        return
+
+    def do_create():
+        if use_symlink:
+            print(f'⚙️  {"Would create symlink" if dryrun else "Creating symlink"}: {target_dir} -> {template_dir.resolve()}')
+            if not dryrun:
+                target_dir.symlink_to(template_dir.resolve(), target_is_directory=True)
+        else:
+            print(f'⚙️  {"Would copy directory" if dryrun else "Copying directory"}: {template_dir} -> {target_dir}')
+            if not dryrun:
+                shutil.copytree(template_dir, target_dir)
+
+    if target_dir.exists() or target_dir.is_symlink():
+        if force:
+            print(f'⚙️  {"Would overwrite" if dryrun else "Overwriting"} existing "{target_dir.name}" directory due to --force flag')
+            if not dryrun:
+                backup_path = backup_item(target_dir)
+                print(f'⚙️  Backed up existing "{target_dir.name}" to {backup_path}')
+            else:
+                print(f'⚙️  Would backup existing "{target_dir.name}"')
+            # After backup, create anew
+            do_create()
+        else:
+            print(colored('⚠️  Warning:', 'yellow'), f'"{target_dir.name}" already exists, skipping directory setup at {target_dir}')
+    else:
+        do_create()
+
+def setup_lldbinit(workspace_root: Path, force: bool = False, dryrun: bool = False, use_symlink: bool = False) -> None:
+    """
+    Set up LLDB initialization files and the .lldb directory in the workspace.
     
     Args:
         workspace_root: Path to the workspace root
         force: Whether to force overwrite existing files
+        dryrun: If True, only show what would be done without making changes
     """
     # Setup user's .lldbinit in $HOME
     user_lldbinit_path = Path.home() / '.lldbinit'
     default_user_lldbinit_path = Path(__file__).parent / 'default.user.lldbinit'
-    setup_config_file(user_lldbinit_path, default_user_lldbinit_path, force)
+    setup_config_file(user_lldbinit_path, default_user_lldbinit_path, force, dryrun, use_symlink)
 
     # Setup workspace .lldbinit
     workspace_lldbinit_path = workspace_root / '.lldbinit'
     default_workspace_lldbinit_path = Path(__file__).parent / 'default.dev.lldbinit'
-    setup_config_file(workspace_lldbinit_path, default_workspace_lldbinit_path, force)
+    setup_config_file(workspace_lldbinit_path, default_workspace_lldbinit_path, force, dryrun, use_symlink)
+
+    # Additionally, ensure .lldb directory exists in the workspace, copying or symlinking from template if available
+    template_lldb_dir = Path(__file__).parent / '.lldb'
+    workspace_lldb_dir = workspace_root / '.lldb'
+
+    if template_lldb_dir.exists() and template_lldb_dir.is_dir():
+        setup_directory(workspace_lldb_dir, template_lldb_dir, force, dryrun, use_symlink)
+    else:
+        print(colored('⚠️  Warning:', 'yellow'), f"Template '.lldb' directory not found at {template_lldb_dir}, skipping directory setup")
 
 def main() -> None:
     """Main entry point for the initialization script."""
@@ -151,12 +248,20 @@ def main() -> None:
     workspace_root = find_workspace_root()
     print(f'📂 Detected bazel workspace: {workspace_root}')
 
+    if args.dryrun:
+        print(colored('🔍 Dry run:', 'blue'),
+              'showing what would be done without making changes.')
+
     if args.force:
         print(colored('⚠️  Warning:', 'yellow'),
-              'Force flag is set. Existing files will be overwritten.')
+              'Force flag is set, existing files will be overwritten.')
 
-    setup_dev_bazelrc(workspace_root, args.force)
-    setup_lldbinit(workspace_root, args.force)
+    if args.symlink:
+        print(colored('🔗 Symlink mode:', 'magenta'),
+              'creating symbolic links instead of copying files.')
+
+    setup_dev_bazelrc(workspace_root, args.force, args.dryrun, args.symlink)
+    setup_lldbinit(workspace_root, args.force, args.dryrun, args.symlink)
     
     print(colored('✅ Initialization done', 'light_green'))
 
