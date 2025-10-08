@@ -1,3 +1,4 @@
+command alias reload command source .lldbinit
 script import os, datetime
 script print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] === Load {os.getcwd()}/.lldbinit")
 command script import .lldb/init_bazel_target.py
