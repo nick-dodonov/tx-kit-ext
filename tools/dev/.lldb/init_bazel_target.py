@@ -1,18 +1,54 @@
 import os
+import shlex
 import datetime
+import subprocess
 # https://lldb.llvm.org/python_api/lldb.SBDebugger.html
 # to support code completion setup used lldb package, e.g., for CLion w/ .venv python interpreter:
 # ln -s "/Users/nik/Applications/CLion 2025.3 EAP.app/Contents/bin/lldb/mac/x64/LLDB.framework/Resources/Python/lldb" .venv/lib/python3.13/site-packages/lldb
 import lldb
 
 print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] === Load {__file__}")
-print(f"LLDB package: {lldb.__path__}")
+print(f"lldb/package: {lldb.__path__}")
 
-#TODO: add relative paths too
-#setting append target.source-map . /Users/nik/p/t/tx/tx-pkg-misc
-#setting append target.source-map external /Users/nik/p/t/tx/tx-pkg-misc/bazel-tx-pkg-misc/external
-#TODO: adopt to current target's module name
-#TODO: adopt to real externals (local --override_module) instead of symlinked ones
-_external_src = '/Users/nik/p/t/tx/tx-pkg-misc/external'
-_external_dst = '/Users/nik/p/t/tx/tx-pkg-misc/bazel-tx-pkg-misc/external'
-lldb.debugger.HandleCommand(f'settings append target.source-map {_external_src} {_external_dst}')
+#TODO: bazel_module_name(): sed -n '/^module(/,/^)/{s/.*name = "\([^"]*\)".*/\1/p;}' MODULE.bazel
+def bazel_output_base():
+    """Extract bazel output base from MODULE.bazel file."""
+    output = subprocess.check_output(shlex.split('bazel info output_base'), text=True)
+    return output
+
+def lldb_cmd(command):
+    print(f'lldb/cmd: {command}')
+    lldb.debugger.HandleCommand(command)
+
+def setup_target_source_map():
+    '''
+    Setup Bazel externals source mapping for current target.
+    - Add relative path mapping for builds compiled/linked with -ffile-compilation-dir=. and/or --linkopt=-Wl,-oso_prefix,
+    - Add absolute path mapping for another build variants (e.g. CLion's Bazel plugin build overrides setup).
+    '''
+    target = lldb.debugger.GetSelectedTarget()
+    if target:
+        print(f"""target: 
+    triple: {target.GetTriple()}
+    platform: {target.GetPlatform().GetTriple()}
+    executable: {target.GetExecutable()}""")
+
+    current_dir = os.getcwd()
+    print(f'current_dir: {current_dir}')
+
+    output_base = bazel_output_base().strip()
+    print(f'output_base: {output_base}')
+
+    external_dst = f'{output_base}/external'
+
+    #TODO: adopt to realpaths of specific externals instead of symlinked ones in output_base (local --override_module)
+    source_map = {
+        "external": external_dst,
+        f'{current_dir}/external': external_dst,
+    }
+
+    for src, dst in source_map.items():
+        lldb_cmd(f'settings append target.source-map {src} {dst}')
+    lldb_cmd('settings show target.source-map')
+
+setup_target_source_map()
