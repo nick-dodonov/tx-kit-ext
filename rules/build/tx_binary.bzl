@@ -1,16 +1,15 @@
-"""Starlark build definitions for tx_binary using cc_binary."""
+"""Starlark build definitions for tx_binary rule (cc_binary wrapper allowing to multi-platform runs)."""
 
 load("@emsdk//emscripten_toolchain:wasm_rules.bzl", "wasm_cc_binary")
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load(":tx_common.bzl", "merge_copts", "merge_linkopts")
 
-def tx_binary(name, *args, **kwargs):
+def tx_binary(name, **kwargs):
     """Creates a multi-platform binary target that works for native and WASM platforms.
 
     Args:
         name: The name of the target.
-        *args: Additional arguments passed to cc_binary.
         **kwargs: Additional keyword arguments passed to cc_binary.
     """
 
@@ -25,7 +24,6 @@ def tx_binary(name, *args, **kwargs):
         name = name + "-bin",
         copts = merged_copts,
         linkopts = merged_linkopts,
-        *args,
         **kwargs
     )
 

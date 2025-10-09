@@ -1,11 +1,11 @@
-"""Starlark build definitions for tx_test using cc_binary."""
+"""Starlark build definitions for tx_test rule (cc_test wrapper allowing to multi-platform runs)."""
 
 load("@emsdk//emscripten_toolchain:wasm_rules.bzl", "wasm_cc_binary")
-load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load(":tx_common.bzl", "merge_copts", "merge_linkopts")
 
-def tx_test(name, *args, **kwargs):
+def tx_test(name, **kwargs):
     """Creates a multi-platform test target that works for native and WASM platforms.
 
     The main test target works directly for both native and WASM platforms.
@@ -18,7 +18,6 @@ def tx_test(name, *args, **kwargs):
 
     Args:
         name: The name of the target.
-        *args: Additional arguments passed to cc_test.
         **kwargs: Additional keyword arguments passed to cc_test.
     """
 
@@ -35,13 +34,12 @@ def tx_test(name, *args, **kwargs):
     #TODO: test_shard_count = kwargs.pop("shard_count", None)
 
     # Native test binary - not a test target itself, just a compilation target
-    cc_binary(
+    cc_test(
         name = name + "-bin",
         copts = merged_copts,
         linkopts = merged_linkopts,
         testonly = True,
         visibility = ["//visibility:private"],
-        *args,
         **kwargs
     )
 

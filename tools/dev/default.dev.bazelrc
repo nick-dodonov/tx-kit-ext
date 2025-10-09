@@ -55,6 +55,9 @@ build:windows --build_runfile_links
 
 #### Target platform specifics 
 build:wasm --platforms=@emsdk//:platform_wasm
+# appends -wasm in output directories to not interfere w/ host builds
+# (e.g. otherwise both builds go to {--symlink_prefix}bazel-out/darwin_arm64-dbg/)
+build:wasm --platform_suffix=wasm
 
 #TODO: try them before setup
 # build:android --android_crosstool_top=@androidndk//:default_crosstool
