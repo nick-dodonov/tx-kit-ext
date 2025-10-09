@@ -36,7 +36,7 @@ def tx_test(name, *args, **kwargs):
 
     # Native test binary - not a test target itself, just a compilation target
     cc_binary(
-        name = name + "-native",
+        name = name + "-bin",
         copts = merged_copts,
         linkopts = merged_linkopts,
         testonly = True,
@@ -48,7 +48,7 @@ def tx_test(name, *args, **kwargs):
     # Extract WASM results for execution via emrun
     wasm_cc_binary(
         name = name + "-wasm",
-        cc_target = ":" + name + "-native",
+        cc_target = ":" + name + "-bin",
         target_compatible_with = ["@platforms//cpu:wasm32"],
         visibility = ["//visibility:public"],
         testonly = True,
@@ -60,7 +60,7 @@ def tx_test(name, *args, **kwargs):
         name = name,
         srcs = select({
             "@platforms//cpu:wasm32": [runner_script],
-            "//conditions:default": [":" + name + "-native"],
+            "//conditions:default": [":" + name + "-bin"],
         }),
         args = select({
             "@platforms//cpu:wasm32": ["$(execpaths :" + name + "-wasm)"],
@@ -68,7 +68,7 @@ def tx_test(name, *args, **kwargs):
         }),
         data = select({
             "@platforms//cpu:wasm32": [":" + name + "-wasm"],
-            "//conditions:default": [":" + name + "-native"],
+            "//conditions:default": [":" + name + "-bin"],
         }),
         testonly = True,
         size = test_size,
