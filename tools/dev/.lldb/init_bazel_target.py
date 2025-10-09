@@ -16,7 +16,7 @@ def bazel_output_base():
     output = subprocess.check_output(shlex.split('bazel info output_base'), text=True)
     return output
 
-def lldb_cmd(command):
+def lldb_cmd(command: str):
     print(f'lldb/cmd: {command}')
     lldb.debugger.HandleCommand(command)
 
