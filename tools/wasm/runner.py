@@ -48,36 +48,117 @@ class WasmRunner:
             print(f"    RUNFILES_DIR: {self.runfiles_dir} (cd into it for test mode)")
             os.chdir(self.runfiles_dir)
     
+    def _extract_from_tar_if_needed(self, base_path: Path) -> Optional[Path]:
+        """Extract files from tar archive if the base file is a tar archive."""
+        import tarfile
+        import tempfile
+        
+        # Check if the base file (without extension) is a tar archive
+        tar_path = base_path.with_suffix('')
+        if tar_path.exists() and tarfile.is_tarfile(tar_path):
+            print(f"Found tar archive: {tar_path}")
+            
+            # Create temporary directory for extraction
+            temp_dir = Path(tempfile.mkdtemp(prefix="wasm_runner_"))
+            print(f"Extracting to temporary directory: {temp_dir}")
+            
+            try:
+                with tarfile.open(tar_path, 'r') as tar:
+                    # Use filter='data' to avoid deprecation warning in Python 3.14+
+                    if hasattr(tarfile, 'data_filter'):
+                        tar.extractall(temp_dir, filter='data')
+                    else:
+                        tar.extractall(temp_dir)
+                
+                # Return the HTML file path from extracted files
+                html_name = base_path.with_suffix('.html').name
+                extracted_html = temp_dir / html_name
+                
+                if extracted_html.exists():
+                    print(f"Successfully extracted HTML file: {extracted_html}")
+                    return extracted_html
+                else:
+                    print(f"HTML file not found in extracted archive: {html_name}")
+                    return None
+                    
+            except Exception as e:
+                print(f"Error extracting tar archive: {e}")
+                return None
+        
+        return None
+
     def find_html_file(self, file_path: str) -> Path:
         """Find the HTML file, handling different execution contexts."""
         html_file = Path(file_path).with_suffix('.html')
         
+        # Strategy 1: Direct file access (common for bazel run)
         if html_file.exists():
+            print(f"Found HTML file directly: {html_file}")
             return html_file
         
-        # For bazel test mode, try to find file in runfiles
-        if self.runfiles_dir:
-            # Convert path from "bazel-out/.../test/file.wasm" to "_main/test/file.html"
-            runfiles_path = Path("_main") / Path(str(html_file).split("bin/", 1)[-1])
-            runfiles_html = runfiles_path.with_suffix('.html')
+        # Strategy 2: Try in build working directory (bazel run with BUILD_WORKING_DIRECTORY)
+        if self.build_working_dir:
+            # Try relative to build working directory
+            build_html = Path(self.build_working_dir) / html_file
+            if build_html.exists():
+                print(f"Found HTML file in build working directory: {build_html}")
+                return build_html
             
-            if runfiles_html.exists():
-                print(f"Found HTML file using RUNFILES_DIR: {runfiles_html}")
-                return runfiles_html
+            # Try in bazel-bin directory
+            bazel_bin_html = Path(self.build_working_dir) / "bazel-bin" / html_file
+            if bazel_bin_html.exists():
+                print(f"Found HTML file in bazel-bin: {bazel_bin_html}")
+                return bazel_bin_html
             
-            raise FileNotFoundError(
-                f"HTML file not found: {html_file}\n"
-                f"  Tried: {runfiles_html}\n"
-                f"  Original: {html_file}\n"
-                f"Current working directory: {os.getcwd()}\n"
-                f"Please build first"
-            )
+            # Try extracting from tar in bazel-bin
+            bazel_bin_base = Path(self.build_working_dir) / "bazel-bin" / Path(file_path)
+            extracted = self._extract_from_tar_if_needed(bazel_bin_base)
+            if extracted:
+                return extracted
         
-        raise FileNotFoundError(
-            f"HTML file not found: {html_file}\n"
-            f"Current working directory: {os.getcwd()}\n"
-            f"Please build first"
-        )
+        # Strategy 3: Try in runfiles directory (bazel test)
+        if self.runfiles_dir:
+            # Try multiple runfiles paths for direct files
+            possible_direct_paths = [
+                Path("_main") / html_file,  # Direct path
+                Path("_main") / Path(str(html_file).split("bin/", 1)[-1]),  # Remove bin/ prefix
+                Path(str(html_file).replace("test/", "_main/test/")),  # Add _main prefix
+            ]
+            
+            for runfiles_html in possible_direct_paths:
+                if runfiles_html.exists():
+                    print(f"Found HTML file using RUNFILES_DIR: {runfiles_html}")
+                    return runfiles_html
+            
+            # Try extracting from tar in runfiles
+            # The tar file is typically at _main/path/to/target
+            runfiles_tar_base = Path("_main") / Path(file_path)
+            extracted = self._extract_from_tar_if_needed(runfiles_tar_base)
+            if extracted:
+                return extracted
+        
+        # Strategy 4: Look for tar archive in current directory
+        current_tar_base = Path(file_path)
+        extracted = self._extract_from_tar_if_needed(current_tar_base)
+        if extracted:
+            return extracted
+        
+        # If all strategies fail, provide comprehensive error message
+        error_msg = f"HTML file not found: {html_file}\n"
+        error_msg += f"  Original file path: {file_path}\n"
+        error_msg += f"  Current working directory: {os.getcwd()}\n"
+        
+        if self.build_working_dir:
+            error_msg += f"  BUILD_WORKING_DIRECTORY: {self.build_working_dir}\n"
+            error_msg += f"  Tried bazel-bin paths\n"
+        
+        if self.runfiles_dir:
+            error_msg += f"  RUNFILES_DIR: {self.runfiles_dir}\n"
+            error_msg += f"  Tried runfiles paths and tar extraction\n"
+        
+        error_msg += f"Please ensure the target is built correctly"
+        
+        raise FileNotFoundError(error_msg)
     
     def run_with_node(self, html_file: Path, args: List[str]) -> int:
         """Run WASM using Node.js (test mode)."""
