@@ -1,9 +1,14 @@
 """Starlark build definitions for tx_binary rule (cc_binary wrapper allowing to multi-platform runs)."""
 
+# OBSOLETE Just keep it for reference.
+#   --run_under is much simpler now with exec transition support in Bazel and
+#   doesn't require to replace standard cc_test/cc_binary rules.
+# TODO: Remove file in future when another build extension will be created.
+
 load("@emsdk//emscripten_toolchain:wasm_rules.bzl", "wasm_cc_binary")
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
-load(":tx_common.bzl", "merge_copts", "merge_linkopts")
+load(":tx_common.bzl", "merge_copts", "merge_linkopts", "log_warning")
 
 def tx_binary(name, **kwargs):
     """Creates a multi-platform binary target that works for native and WASM platforms.
@@ -12,6 +17,13 @@ def tx_binary(name, **kwargs):
         name: The name of the target.
         **kwargs: Additional keyword arguments passed to cc_binary.
     """
+
+    log_warning("""tx_binary is obsolete, prefer using standard cc_binary (update copts/linkopts args accordingly) with --run_under and --platforms flags. Example in .bazelrc:
+    build:wasm --platforms=@emsdk//:platform_wasm
+    build:wasm --extra_toolchains=@bazel_tools//tools/python:autodetecting_toolchain
+    test:wasm --run_under="@tx-kit-ext//tools/wasm:runner --"
+    run:wasm --run_under="@tx-kit-ext//tools/wasm:runner --"
+""")
 
     # Merge user options with defaults
     user_copts = kwargs.pop("copts", [])
