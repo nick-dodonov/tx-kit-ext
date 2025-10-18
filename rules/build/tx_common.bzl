@@ -1,4 +1,4 @@
-"""Common utilities for tx_binary and tx_test."""
+"""Common utilities for building Tx binaries and tests."""
 
 def get_default_copts():
     """Returns default platform-specific copts for tx targets."""
@@ -45,3 +45,9 @@ def merge_copts(user_copts):
 def merge_linkopts(user_linkopts):
     """Merges user linkopts with default platform-specific ones."""
     return get_default_linkopts() + user_linkopts
+
+_YELLOW = "\033[1;33m"
+_RESET = "\033[0m"
+def log_warning(message):
+    """Logs a warning message during the build."""
+    print(_YELLOW + "\n⚠️  WARNING: " + _RESET + message)
