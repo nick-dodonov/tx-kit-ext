@@ -5,11 +5,15 @@
 # - https://bazel.build/reference/command-line-reference
 # - https://bazel.build/reference/flag-cheatsheet
 
-#### Quick setup
+#### Quick developer setup samples (to put into .dev-user.bazelrc)
 # build --enable_platform_specific_config
 # build --config=local-tools
 # build --config=debug
 # build --config=wasm
+
+# Workaround for CLion w/ Bazel project (otherwise it uses c++17 for syntax not using external compile_commands.json)
+# TODO: make issue in https://github.com/bazelbuild/intellij
+# build --cxxopt="--std=c++20"
 
 #### Dependencies overrides
 # common --override_module=tx-kit-ext=../tx-kit-ext
