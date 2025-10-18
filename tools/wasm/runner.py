@@ -13,6 +13,12 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 
+def _log(*args, **kwargs) -> None:
+    """Print function with automatic flush."""
+    print(*args, **kwargs)
+    sys.stdout.flush()
+
+
 class Colors:
     """ANSI color codes for terminal output."""
     GREEN = "\033[32m"
@@ -33,19 +39,19 @@ class WasmRunner:
         
     def print_header(self) -> None:
         """Print the runner header with environment information."""
-        print(f"{Colors.YELLOW}🚀 WASM Runner:{Colors.RESET}")
-        print(f"  cwd: {os.getcwd()}")
-        print(f"  exe: {sys.argv[0]}")
-        print(f"  args: {' '.join(sys.argv[1:])}")
+        _log(f"{Colors.YELLOW}🚀 WASM Runner:{Colors.RESET}")
+        _log(f"  cwd: {os.getcwd()}")
+        _log(f"  exe: {sys.argv[0]}")
+        _log(f"  args: {' '.join(sys.argv[1:])}")
         
         if self.build_workspace_dir:
-            print(f"    BUILD_WORKSPACE_DIRECTORY: {self.build_workspace_dir}")
+            _log(f"    BUILD_WORKSPACE_DIRECTORY: {self.build_workspace_dir}")
         
         if self.build_working_dir:
-            print(f"    BUILD_WORKING_DIRECTORY: {self.build_working_dir} (cd into it)")
+            _log(f"    BUILD_WORKING_DIRECTORY: {self.build_working_dir} (cd into it)")
             os.chdir(self.build_working_dir)
         elif self.runfiles_dir:
-            print(f"    RUNFILES_DIR: {self.runfiles_dir} (cd into it for test mode)")
+            _log(f"    RUNFILES_DIR: {self.runfiles_dir} (cd into it for test mode)")
             os.chdir(self.runfiles_dir)
     
     def _extract_from_tar_if_needed(self, base_path: Path) -> Optional[Path]:
@@ -56,11 +62,11 @@ class WasmRunner:
         # Check if the base file (without extension) is a tar archive
         tar_path = base_path.with_suffix('')
         if tar_path.exists() and tarfile.is_tarfile(tar_path):
-            print(f"Found tar archive: {tar_path}")
+            _log(f"Found tar archive: {tar_path}")
             
             # Create temporary directory for extraction
             temp_dir = Path(tempfile.mkdtemp(prefix="wasm_runner_"))
-            print(f"Extracting to temporary directory: {temp_dir}")
+            _log(f"Extracting to temporary directory: {temp_dir}")
             
             try:
                 with tarfile.open(tar_path, 'r') as tar:
@@ -75,14 +81,14 @@ class WasmRunner:
                 extracted_html = temp_dir / html_name
                 
                 if extracted_html.exists():
-                    print(f"Successfully extracted HTML file: {extracted_html}")
+                    _log(f"Successfully extracted HTML file: {extracted_html}")
                     return extracted_html
                 else:
-                    print(f"HTML file not found in extracted archive: {html_name}")
+                    _log(f"HTML file not found in extracted archive: {html_name}")
                     return None
                     
             except Exception as e:
-                print(f"Error extracting tar archive: {e}")
+                _log(f"Error extracting tar archive: {e}")
                 return None
         
         return None
@@ -93,7 +99,7 @@ class WasmRunner:
         
         # Strategy 1: Direct file access (common for bazel run)
         if html_file.exists():
-            print(f"Found HTML file directly: {html_file}")
+            _log(f"Found HTML file directly: {html_file}")
             return html_file
         
         # Strategy 2: Try in build working directory (bazel run with BUILD_WORKING_DIRECTORY)
@@ -101,13 +107,13 @@ class WasmRunner:
             # Try relative to build working directory
             build_html = Path(self.build_working_dir) / html_file
             if build_html.exists():
-                print(f"Found HTML file in build working directory: {build_html}")
+                _log(f"Found HTML file in build working directory: {build_html}")
                 return build_html
             
             # Try in bazel-bin directory
             bazel_bin_html = Path(self.build_working_dir) / "bazel-bin" / html_file
             if bazel_bin_html.exists():
-                print(f"Found HTML file in bazel-bin: {bazel_bin_html}")
+                _log(f"Found HTML file in bazel-bin: {bazel_bin_html}")
                 return bazel_bin_html
             
             # Try extracting from tar in bazel-bin
@@ -127,7 +133,7 @@ class WasmRunner:
             
             for runfiles_html in possible_direct_paths:
                 if runfiles_html.exists():
-                    print(f"Found HTML file using RUNFILES_DIR: {runfiles_html}")
+                    _log(f"Found HTML file using RUNFILES_DIR: {runfiles_html}")
                     return runfiles_html
             
             # Try extracting from tar in runfiles
@@ -162,30 +168,30 @@ class WasmRunner:
     
     def run_with_node(self, html_file: Path, args: List[str]) -> int:
         """Run WASM using Node.js (test mode)."""
-        print(f"{Colors.YELLOW}🚀 Test mode (via node):{Colors.RESET}")
-        print(f"  cwd: {os.getcwd()}")
-        print(f"  html: {html_file}")
+        _log(f"{Colors.YELLOW}🚀 Test mode (via node):{Colors.RESET}")
+        _log(f"  cwd: {os.getcwd()}")
+        _log(f"  html: {html_file}")
         
         js_file = html_file.with_suffix('.js')
         if not js_file.exists():
             raise FileNotFoundError(f"JavaScript file not found: {js_file}")
         
-        print(f"  js: {js_file}")
+        _log(f"  js: {js_file}")
         if args:
-            print(f"  args: {' '.join(args)}")
+            _log(f"  args: {' '.join(args)}")
         
         cmd = ['node', str(js_file)] + args
-        print(f"  cmd: {' '.join(cmd)}")
+        _log(f"  cmd: {' '.join(cmd)}")
         
         return self._execute_command(cmd)
     
     def run_with_emrun(self, html_file: Path, args: List[str]) -> int:
         """Run WASM using emrun (run mode)."""
-        print(f"{Colors.YELLOW}🚀 Run mode (via emrun):{Colors.RESET}")
-        print(f"  cwd: {os.getcwd()}")
-        print(f"  html: {html_file}")
+        _log(f"{Colors.YELLOW}🚀 Run mode (via emrun):{Colors.RESET}")
+        _log(f"  cwd: {os.getcwd()}")
+        _log(f"  html: {html_file}")
         if args:
-            print(f"  args: {' '.join(args)}")
+            _log(f"  args: {' '.join(args)}")
         
         cmd = [
             'emrun',
@@ -195,31 +201,31 @@ class WasmRunner:
             '--browser_args=-headless',
             str(html_file)
         ] + args
-        print(f"  cmd: {' '.join(cmd)}")
+        _log(f"  cmd: {' '.join(cmd)}")
         
         return self._execute_command(cmd)
     
     def _execute_command(self, cmd: List[str]) -> int:
         """Execute command with proper output formatting."""
-        print(f"{Colors.LIGHT_BLUE}{'>' * 64}{Colors.RESET}")
+        _log(f"{Colors.LIGHT_BLUE}{'>' * 64}{Colors.RESET}")
         
         try:
             result = subprocess.run(cmd, check=False)
             exit_code = result.returncode
         except FileNotFoundError as e:
-            print(f"{Colors.RED}❌ Command not found: {cmd[0]}{Colors.RESET}")
-            print(f"Error: {e}")
+            _log(f"{Colors.RED}❌ Command not found: {cmd[0]}{Colors.RESET}")
+            _log(f"Error: {e}")
             exit_code = 127
         except Exception as e:
-            print(f"{Colors.RED}❌ Execution error: {e}{Colors.RESET}")
+            _log(f"{Colors.RED}❌ Execution error: {e}{Colors.RESET}")
             exit_code = 1
         
-        print(f"{Colors.LIGHT_BLUE}{'<' * 64}{Colors.RESET}")
+        _log(f"{Colors.LIGHT_BLUE}{'<' * 64}{Colors.RESET}")
         
         if exit_code == 0:
-            print(f"{Colors.GREEN}✅ Success: {exit_code}{Colors.RESET}")
+            _log(f"{Colors.GREEN}✅ Success: {exit_code}{Colors.RESET}")
         else:
-            print(f"{Colors.RED}❌ Error: {exit_code}{Colors.RESET}")
+            _log(f"{Colors.RED}❌ Error: {exit_code}{Colors.RESET}")
         
         return exit_code
     
@@ -229,13 +235,13 @@ class WasmRunner:
         
         # Validate emrun usage in test mode
         if use_emrun and self.bazel_test and not self.build_working_dir:
-            print(f"{Colors.RED}❌ Error: --emrun cannot be used in test mode{Colors.RESET}")
+            _log(f"{Colors.RED}❌ Error: --emrun cannot be used in test mode{Colors.RESET}")
             return 1
         
         try:
             html_file = self.find_html_file(file_path)
         except FileNotFoundError as e:
-            print(f"{Colors.RED}❌ {e}{Colors.RESET}")
+            _log(f"{Colors.RED}❌ {e}{Colors.RESET}")
             return 1
         
         if use_emrun:
@@ -285,10 +291,10 @@ def main() -> int:
         runner = WasmRunner()
         return runner.run(file_path, use_emrun, args)
     except KeyboardInterrupt:
-        print(f"\n{Colors.YELLOW}⚠️  Interrupted by user{Colors.RESET}")
+        _log(f"\n{Colors.YELLOW}⚠️  Interrupted by user{Colors.RESET}")
         return 130
     except Exception as e:
-        print(f"{Colors.RED}❌ Unexpected error: {e}{Colors.RESET}")
+        _log(f"{Colors.RED}❌ Unexpected error: {e}{Colors.RESET}")
         return 1
 
 
