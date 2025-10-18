@@ -113,3 +113,6 @@ test:integration --test_timeout=300
 test:performance --test_output=all
 test:performance --test_timeout=600
 test:performance --test_env=PERFORMANCE_TEST=1
+
+#### Developer overrides and defaults
+try-import %workspace%/.dev-user.bazelrc
