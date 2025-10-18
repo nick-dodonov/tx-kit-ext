@@ -1,9 +1,14 @@
 """Starlark build definitions for tx_test rule (cc_test wrapper allowing to multi-platform runs)."""
 
+# OBSOLETE Just keep it for reference.
+#   --run_under is much simpler now with exec transition support in Bazel and
+#   doesn't require to replace standard cc_test/cc_binary rules.
+# TODO: Remove file in future when another build extension will be created.
+
 load("@emsdk//emscripten_toolchain:wasm_rules.bzl", "wasm_cc_binary")
 load("@rules_cc//cc:cc_test.bzl", "cc_test")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
-load(":tx_common.bzl", "merge_copts", "merge_linkopts")
+load(":tx_common.bzl", "merge_copts", "merge_linkopts", "log_warning")
 
 def tx_test(name, **kwargs):
     """Creates a multi-platform test target that works for native and WASM platforms.
@@ -14,12 +19,19 @@ def tx_test(name, **kwargs):
     Usage:
     - Native: bazel test //test:name
     - WASM: bazel test //test:name --platforms=@emsdk//:platform_wasm
-    - WASM run: bazel run //test:name-run --platforms=@emsdk//:platform_wasm
+    - WASM run: bazel run //test:name --platforms=@emsdk//:platform_wasm
 
     Args:
         name: The name of the target.
         **kwargs: Additional keyword arguments passed to cc_test.
     """
+
+    log_warning("""tx_test is obsolete, prefer using standard cc_test (update copts/linkopts/size args accordingly) with --run_under and --platforms flags. Example in .bazelrc:
+    build:wasm --platforms=@emsdk//:platform_wasm
+    build:wasm --extra_toolchains=@bazel_tools//tools/python:autodetecting_toolchain
+    test:wasm --run_under="@tx-kit-ext//tools/wasm:runner --"
+    run:wasm --run_under="@tx-kit-ext//tools/wasm:runner --"
+""")
 
     # Merge user options with defaults
     user_copts = kwargs.pop("copts", [])
