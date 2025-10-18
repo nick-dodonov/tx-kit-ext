@@ -1,11 +1,9 @@
-"""Common utilities for building Tx binaries and tests."""
+"""Common utilities for building tx binaries and tests."""
 
-def get_default_copts():
+def _get_default_copts():
     """Returns default platform-specific copts for tx targets."""
     return select({
         "@platforms//cpu:wasm32": [
-            # Keep exceptions disabled for WASM - causes issues with shared memory
-            "-fno-exceptions",
             # Disable threading support to avoid shared memory issues
             "-mthread-model",
             "single",
@@ -13,7 +11,20 @@ def get_default_copts():
         "//conditions:default": [],
     })
 
-def get_default_linkopts():
+def _get_default_cxxopts():
+    """Returns default platform-specific cxxopts for tx targets."""
+    return [
+        "-std=c++20", # Use C++20 standard
+        "-fno-exceptions", # Disable exceptions globally
+    ] + select({
+        "@platforms//cpu:wasm32": [
+            # Keep exceptions disabled for WASM - causes issues with shared memory
+            # "-fno-exceptions",
+        ],
+        "//conditions:default": [],
+    })
+
+def _get_default_linkopts():
     """Returns default platform-specific linkopts for tx targets."""
     return select({
         "@platforms//cpu:wasm32": [
@@ -38,16 +49,30 @@ def get_default_linkopts():
         "//conditions:default": [],
     })
 
-def merge_copts(user_copts):
+def _get_copts(user_copts):
     """Merges user copts with default platform-specific ones."""
-    return get_default_copts() + user_copts
+    return _get_default_copts() + user_copts
 
-def merge_linkopts(user_linkopts):
+def _get_cxxopts(user_cxxopts):
+    """Merges user cxxopts with default platform-specific ones."""
+    return _get_default_cxxopts() + user_cxxopts
+
+def _get_linkopts(user_linkopts):
     """Merges user linkopts with default platform-specific ones."""
-    return get_default_linkopts() + user_linkopts
+    return _get_default_linkopts() + user_linkopts
+
+tx_cc = struct(
+    get_default_copts = _get_default_copts,
+    get_default_cxxopts = _get_default_cxxopts,
+    get_default_linkopts = _get_default_linkopts,
+    get_copts = _get_copts,
+    get_cxxopts = _get_cxxopts,
+    get_linkopts = _get_linkopts,
+)
 
 _YELLOW = "\033[1;33m"
 _RESET = "\033[0m"
+
 def log_warning(message):
     """Logs a warning message during the build."""
     print(_YELLOW + "\n⚠️  WARNING: " + _RESET + message)

@@ -1,28 +1,24 @@
 """Build definitions for tx_test rule (cc_test wrapper w/ default build settings for multi-platform runs)."""
 
 load("@emsdk//emscripten_toolchain:wasm_rules.bzl", "wasm_cc_binary")
+load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load("@rules_cc//cc:cc_test.bzl", "cc_test")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
-load(":tx_common.bzl", "log_warning", "merge_copts", "merge_linkopts")
+load(":tx_common.bzl", "log_warning", "tx_cc")
 
 def tx_test(name, **kwargs):
-    """Creates a multi-platform test target w/ default Tx build options.
+    """Creates a multi-platform test target w/ default tx build options.
 
     Args:
         name: The name of the target.
         **kwargs: Additional keyword arguments passed to cc_test.
     """
-    user_copts = kwargs.pop("copts", [])
-    user_linkopts = kwargs.pop("linkopts", [])
-    merged_copts = merge_copts(user_copts)
-    merged_linkopts = merge_linkopts(user_linkopts)
-    test_size = kwargs.pop("size", "small")
-
     cc_test(
         name = name,
-        copts = merged_copts,
-        linkopts = merged_linkopts,
-        size = test_size,
+        copts = tx_cc.get_copts(kwargs.pop("copts", [])),
+        cxxopts = tx_cc.get_cxxopts(kwargs.pop("cxxopts", [])),
+        linkopts = tx_cc.get_linkopts(kwargs.pop("linkopts", [])),
+        size = kwargs.pop("size", "small"),
         testonly = True,
         visibility = ["//visibility:private"],
         **kwargs
@@ -35,6 +31,7 @@ def tx_test(name, **kwargs):
 # TODO: Remove file in future when another build extension will be created.
 def tx_test_old(name, **kwargs):
     """Creates a multi-platform test target that works for native and WASM platforms.
+
     Args:
         name: The name of the target.
         **kwargs: Additional keyword arguments passed to cc_test.
@@ -46,24 +43,15 @@ def tx_test_old(name, **kwargs):
     test:wasm --run_under="@tx-kit-ext//tools/wasm:runner --"
     run:wasm --run_under="@tx-kit-ext//tools/wasm:runner --"
 """)
-
-    # Merge user options with defaults
-    user_copts = kwargs.pop("copts", [])
-    user_linkopts = kwargs.pop("linkopts", [])
-    merged_copts = merge_copts(user_copts)
-    merged_linkopts = merge_linkopts(user_linkopts)
-
-    # Extract test-specific kwargs that don't apply to cc_binary
     test_size = kwargs.pop("size", "small")
-    #TODO: test_timeout = kwargs.pop("timeout", None)
-    #TODO: test_flaky = kwargs.pop("flaky", None)
-    #TODO: test_shard_count = kwargs.pop("shard_count", None)
 
     # Native test binary - not a test target itself, just a compilation target
-    cc_test(
+    cc_binary(
         name = name + "-bin",
-        copts = merged_copts,
-        linkopts = merged_linkopts,
+        copts = tx_cc.get_copts(kwargs.pop("copts", [])),
+        cxxopts = tx_cc.get_cxxopts(kwargs.pop("cxxopts", [])),
+        linkopts = tx_cc.get_linkopts(kwargs.pop("linkopts", [])),
+        size = test_size,
         testonly = True,
         visibility = ["//visibility:private"],
         **kwargs
