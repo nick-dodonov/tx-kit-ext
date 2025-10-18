@@ -58,6 +58,11 @@ build:wasm --platforms=@emsdk//:platform_wasm
 # appends -wasm in output directories to not interfere w/ host builds
 # (e.g. otherwise both builds go to {--symlink_prefix}bazel-out/darwin_arm64-dbg/)
 build:wasm --platform_suffix=wasm
+# --extra_toolchains allows to build @tx-kit-ext//tools/wasm:runner 
+#   and reference it as task under --run_under (instead of executable)
+build:wasm --extra_toolchains=@bazel_tools//tools/python:autodetecting_toolchain
+test:wasm --run_under="@tx-kit-ext//tools/wasm:runner --"
+run:wasm --run_under="@tx-kit-ext//tools/wasm:runner --"
 
 #TODO: try them before setup
 # build:android --android_crosstool_top=@androidndk//:default_crosstool
