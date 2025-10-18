@@ -14,8 +14,8 @@ def _get_default_copts():
 def _get_default_cxxopts():
     """Returns default platform-specific cxxopts for tx targets."""
     return [
-        "-std=c++20", # Use C++20 standard
-        "-fno-exceptions", # Disable exceptions globally
+        "-std=c++20",  # Use C++20 standard
+        "-fno-exceptions",  # Disable exceptions globally
     ] + select({
         "@platforms//cpu:wasm32": [
             # Keep exceptions disabled for WASM - causes issues with shared memory
@@ -70,9 +70,8 @@ tx_cc = struct(
     get_linkopts = _get_linkopts,
 )
 
-_YELLOW = "\033[1;33m"
-_RESET = "\033[0m"
-
 def log_warning(message):
     """Logs a warning message during the build."""
-    print(_YELLOW + "\n⚠️  WARNING: " + _RESET + message)
+    _YELLOW = "\033[1;33m"
+    _RESET = "\033[0m"
+    print(_YELLOW + "\n⚠️  WARNING: " + _RESET + message)  # buildifier: disable=print
