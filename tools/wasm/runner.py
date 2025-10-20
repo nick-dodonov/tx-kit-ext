@@ -299,4 +299,7 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    # TODO: pass TESTBRIDGE_TEST_ONLY environment variable to executor supporting bazel run/test --test_filter=
+    # import pprint
+    # pprint.pprint(dict(os.environ))
     sys.exit(main())
