@@ -3,10 +3,13 @@
 def _get_default_copts():
     """Returns default platform-specific copts for tx targets."""
     return select({
+        # https://emscripten.org/docs/tools_reference/emcc.html
         "@platforms//cpu:wasm32": [
-            # Disable threading support to avoid shared memory issues
-            "-mthread-model",
-            "single",
+            # # Disable threading support to avoid shared memory issues
+            # "-mthread-model",
+            # "single",
+            # https://emscripten.org/docs/porting/pthreads.html
+            "-pthread",
         ],
         "//conditions:default": [],
     })
@@ -20,6 +23,7 @@ def _get_default_cxxopts():
         "@platforms//cpu:wasm32": [
             # Keep exceptions disabled for WASM - causes issues with shared memory
             # "-fno-exceptions",
+            "-pthread",
         ],
         "//conditions:default": [],
     })
@@ -35,9 +39,11 @@ def _get_default_linkopts():
             # - https://emscripten.org/docs/getting_started/FAQ.html#what-does-exiting-the-runtime-mean-why-don-t-atexit-s-run
             # - https://github.com/emscripten-core/emscripten/blob/main/src/settings.js
             "-sEXIT_RUNTIME=1",
-            # Disable threading and shared memory completely
-            "-sUSE_PTHREADS=0",
-            "-sPROXY_TO_PTHREAD=0",
+            # # Disable threading and shared memory completely
+            # "-sUSE_PTHREADS=0",
+            # "-sPROXY_TO_PTHREAD=0",
+            "-pthread",
+            "-sPTHREAD_POOL_SIZE=4",
         ],
         # "@platforms//os:windows": [
         #     "/SUBSYSTEM:CONSOLE",
