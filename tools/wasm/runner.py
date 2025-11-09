@@ -10,10 +10,10 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Any
 
 
-def _log(*args, **kwargs) -> None:
+def _log(*args: Any, **kwargs: Any) -> None:
     """Print function with automatic flush."""
     print(*args, **kwargs)
     sys.stdout.flush()
@@ -43,7 +43,7 @@ class WasmRunner:
         _log(f"  cwd: {os.getcwd()}")
         _log(f"  exe: {sys.argv[0]}")
         _log(f"  args: {' '.join(sys.argv[1:])}")
-        
+
         if self.build_workspace_dir:
             _log(f"    BUILD_WORKSPACE_DIRECTORY: {self.build_workspace_dir}")
         
@@ -257,7 +257,7 @@ def parse_arguments() -> Tuple[str, bool, List[str]]:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  %(prog)s file.wasm                    # Run with Node.js
+  %(prog)s file.wasm                   # Run with Node.js
   %(prog)s file.html --emrun           # Run with emrun
   %(prog)s file.wasm -e --arg1 value   # Run with emrun and arguments
         """
@@ -279,8 +279,18 @@ Examples:
         nargs='*',
         help='Additional arguments to pass to the runner'
     )
-    
-    parsed_args = parser.parse_args()
+
+    # Use parse_intermixed_args() instead of parse_args() allowing to use --emrun after positional (file) args
+    args = sys.argv[1:]
+    # Remove leading '--' if present because Bazel run requires it to separate own and tool args but unfortunately leaves passing to tool,
+    #   so argparse sees it as a start of positional arguments
+    if args and args[0] == '--':
+        args = args[1:]
+
+    _log(f"Raw command line arguments: {args}")
+    parsed_args = parser.parse_intermixed_args(args)
+
+    _log(f"Parsed arguments: file={parsed_args.file}, emrun={parsed_args.emrun}, args={parsed_args.args}")
     return parsed_args.file, parsed_args.emrun, parsed_args.args
 
 
