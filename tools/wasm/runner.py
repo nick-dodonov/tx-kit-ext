@@ -25,6 +25,7 @@ class Options:
     """Command line options."""
     file: str
     use_emrun: bool
+    show: bool
     args: List[str]
 
 
@@ -194,7 +195,7 @@ class WasmRunner:
         
         return self._execute_command(cmd)
     
-    def run_with_emrun(self, html_file: Path, args: List[str]) -> int:
+    def run_with_emrun(self, html_file: Path, args: List[str], show: bool = False) -> int:
         """Run WASM using emrun (run mode)."""
         _log(f"{Colors.YELLOW}🚀 Run mode (via emrun):{Colors.RESET}")
         _log(f"  cwd: {os.getcwd()}")
@@ -207,9 +208,14 @@ class WasmRunner:
             '--kill_start',
             '--kill_exit', 
             '--browser=chrome',
-            '--browser_args=-headless',
-            str(html_file)
-        ] + args
+        ]
+        
+        # Add headless mode unless show is enabled
+        if not show:
+            cmd.append('--browser_args=-headless')
+            
+        cmd.append(str(html_file))
+        cmd.extend(args)
         _log(f"  cmd: {' '.join(cmd)}")
         
         return self._execute_command(cmd)
@@ -238,7 +244,7 @@ class WasmRunner:
         
         return exit_code
     
-    def run(self, file_path: str, use_emrun: bool, args: List[str]) -> int:
+    def run(self, file_path: str, use_emrun: bool, args: List[str], show: bool = False) -> int:
         """Main run method."""
         self.print_header()
         
@@ -254,13 +260,13 @@ class WasmRunner:
             return 1
         
         if use_emrun:
-            return self.run_with_emrun(html_file, args)
+            return self.run_with_emrun(html_file, args, show)
         else:
             return self.run_with_node(html_file, args)
             
     def run_with_options(self, options: Options) -> int:
         """Main run method using Options object."""
-        return self.run(options.file, options.use_emrun, options.args)
+        return self.run(options.file, options.use_emrun, options.args, options.show)
 
 
 def parse_arguments() -> "Options":
@@ -270,9 +276,10 @@ def parse_arguments() -> "Options":
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  %(prog)s file.wasm                   # Run with Node.js
-  %(prog)s file.html --emrun           # Run with emrun
-  %(prog)s file.wasm -e --arg1 value   # Run with emrun and arguments
+  %(prog)s file.wasm                        # Run with Node.js
+  %(prog)s file.html --emrun                # Run with emrun (headless mode)
+  %(prog)s file.wasm -s                     # Run with emrun in browser window
+  %(prog)s file.wasm --show --arg1 value    # Run in browser with arguments
         """
     )
     
@@ -285,6 +292,12 @@ Examples:
         '--emrun', '-e',
         action='store_true',
         help='Use emrun instead of Node.js'
+    )
+    
+    parser.add_argument(
+        '--show', '-s',
+        action='store_true',
+        help='Show in browser window instead of headless mode (implies --emrun)'
     )
     
     parser.add_argument(
@@ -303,9 +316,13 @@ Examples:
     _log(f"Raw command line arguments: {args}")
     parsed_args = parser.parse_intermixed_args(args)
 
+    # If show is enabled, automatically enable emrun
+    use_emrun = parsed_args.emrun or parsed_args.show
+
     options = Options(
         file=parsed_args.file,
-        use_emrun=parsed_args.emrun,
+        use_emrun=use_emrun,
+        show=parsed_args.show,
         args=parsed_args.args
     )
     _log(f"Parsed arguments: file={options.file}, emrun={options.use_emrun}, args={options.args}")
