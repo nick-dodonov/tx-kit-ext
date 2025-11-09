@@ -9,14 +9,23 @@ import argparse
 import os
 import subprocess
 import sys
+from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Tuple, Any
+from typing import List, Optional, Any
 
 
 def _log(*args: Any, **kwargs: Any) -> None:
     """Print function with automatic flush."""
     print(*args, **kwargs)
     sys.stdout.flush()
+
+
+@dataclass
+class Options:
+    """Command line options."""
+    file: str
+    use_emrun: bool
+    args: List[str]
 
 
 class Colors:
@@ -248,9 +257,13 @@ class WasmRunner:
             return self.run_with_emrun(html_file, args)
         else:
             return self.run_with_node(html_file, args)
+            
+    def run_with_options(self, options: Options) -> int:
+        """Main run method using Options object."""
+        return self.run(options.file, options.use_emrun, options.args)
 
 
-def parse_arguments() -> Tuple[str, bool, List[str]]:
+def parse_arguments() -> "Options":
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
         description="WASM Runner - Run WebAssembly builds via Node.js or emrun",
@@ -290,16 +303,21 @@ Examples:
     _log(f"Raw command line arguments: {args}")
     parsed_args = parser.parse_intermixed_args(args)
 
-    _log(f"Parsed arguments: file={parsed_args.file}, emrun={parsed_args.emrun}, args={parsed_args.args}")
-    return parsed_args.file, parsed_args.emrun, parsed_args.args
+    options = Options(
+        file=parsed_args.file,
+        use_emrun=parsed_args.emrun,
+        args=parsed_args.args
+    )
+    _log(f"Parsed arguments: file={options.file}, emrun={options.use_emrun}, args={options.args}")
+    return options
 
 
 def main() -> int:
     """Main entry point."""
     try:
-        file_path, use_emrun, args = parse_arguments()
+        options = parse_arguments()
         runner = WasmRunner()
-        return runner.run(file_path, use_emrun, args)
+        return runner.run_with_options(options)
     except KeyboardInterrupt:
         _log(f"\n{Colors.YELLOW}⚠️  Interrupted by user{Colors.RESET}")
         return 130
