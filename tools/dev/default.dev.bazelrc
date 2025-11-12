@@ -35,11 +35,28 @@
 # build --jobs=16
 
 #### Build specifics
-build:debug -c dbg
+build:debug --compilation_mode=dbg
 build:debug --spawn_strategy=local
 build:debug --copt=-ffile-compilation-dir=.
 
 build:release --compilation_mode=opt
+
+build:no-exceptions --copt=-fno-exceptions
+build:no-rtti --copt=-fno-rtti --copt=-DASIO_NO_TYPEID
+build:size-opt --copt=-Os
+build:visibility-hidden --copt=-fvisibility=hidden
+
+build:lto --copt=-flto
+build:lto --linkopt=-flto
+build:strip --strip=always
+
+build:ultra-minimal --config=release
+build:ultra-minimal --config=no-exceptions
+build:ultra-minimal --config=no-rtti
+build:ultra-minimal --config=size-opt
+build:ultra-minimal --config=visibility-hidden
+build:ultra-minimal --config=lto
+build:ultra-minimal --config=strip
 
 #### Local development with preinstalled tools
 build:local-tools --host_action_env=PATH
