@@ -13,7 +13,7 @@
 
 # Workaround for CLion w/ Bazel project (otherwise it uses c++17 for syntax not using external compile_commands.json)
 # TODO: make issue in https://github.com/bazelbuild/intellij
-# build --cxxopt="--std=c++20"
+# build --cxxopt="-std=c++20"
 
 #### Dependencies overrides
 # common --override_module=tx-kit-ext=../tx-kit-ext
