@@ -6,8 +6,7 @@ def _get_default_copts():
         # https://emscripten.org/docs/tools_reference/emcc.html
         "@platforms//cpu:wasm32": [
             # # Disable threading support to avoid shared memory issues
-            # "-mthread-model",
-            # "single",
+            # "-mthread-model", "single",
             # https://emscripten.org/docs/porting/pthreads.html
             "-pthread",
         ],
@@ -19,14 +18,7 @@ def _get_default_cxxopts():
     return [
         "-std=c++20",  # Use C++20 standard
         "-fno-exceptions",  # Disable exceptions globally
-    ] + select({
-        "@platforms//cpu:wasm32": [
-            # Keep exceptions disabled for WASM - causes issues with shared memory
-            # "-fno-exceptions",
-            "-pthread",
-        ],
-        "//conditions:default": [],
-    })
+    ]
 
 def _get_default_linkopts():
     """Returns default platform-specific linkopts for tx targets."""
