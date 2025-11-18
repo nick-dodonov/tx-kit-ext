@@ -21,11 +21,19 @@ def _log(*args: Any, **kwargs: Any) -> None:
 
 
 @dataclass
+class EmrunOptions:
+    """emrun execution options."""
+    show: bool
+    
+    def __str__(self) -> str:
+        return f"(show={self.show})"
+
+
+@dataclass
 class Options:
     """Command line options."""
     file: str
-    use_emrun: bool
-    show: bool
+    emrun: EmrunOptions | None
     args: List[str]
 
 
@@ -194,8 +202,8 @@ class WasmRunner:
         _log(f"  cmd: {' '.join(cmd)}")
         
         return self._execute_command(cmd)
-    
-    def run_with_emrun(self, html_file: Path, args: List[str], show: bool = False) -> int:
+
+    def run_with_emrun(self, html_file: Path, args: List[str], emrun: EmrunOptions) -> int:
         """Run WASM using emrun (run mode)."""
         _log(f"{Colors.YELLOW}🚀 Run mode (via emrun):{Colors.RESET}")
         _log(f"  cwd: {os.getcwd()}")
@@ -215,7 +223,7 @@ class WasmRunner:
             "--disable-background-networking", # Disable various network services (including prefetching and update checks)
         ]
         # Add headless mode unless show is enabled
-        if not show:
+        if not emrun.show:
             browser_args.append("--headless")
 
         cmd.append('--browser_args="{}"'.format(' '.join(browser_args)))
@@ -250,29 +258,25 @@ class WasmRunner:
         
         return exit_code
     
-    def run(self, file_path: str, use_emrun: bool, args: List[str], show: bool = False) -> int:
+    def run(self, options: Options) -> int:
         """Main run method."""
         self.print_header()
         
         # Validate emrun usage in test mode
-        if use_emrun and self.bazel_test and not self.build_working_dir:
+        if options.emrun and self.bazel_test and not self.build_working_dir:
             _log(f"{Colors.RED}❌ Error: --emrun cannot be used in test mode{Colors.RESET}")
             return 1
         
         try:
-            html_file = self.find_html_file(file_path)
+            html_file = self.find_html_file(options.file)
         except FileNotFoundError as e:
             _log(f"{Colors.RED}❌ {e}{Colors.RESET}")
             return 1
-        
-        if use_emrun:
-            return self.run_with_emrun(html_file, args, show)
+
+        if options.emrun:
+            return self.run_with_emrun(html_file, options.args, options.emrun)
         else:
-            return self.run_with_node(html_file, args)
-            
-    def run_with_options(self, options: Options) -> int:
-        """Main run method using Options object."""
-        return self.run(options.file, options.use_emrun, options.args, options.show)
+            return self.run_with_node(html_file, options.args)
 
 
 def parse_arguments() -> "Options":
@@ -282,16 +286,12 @@ def parse_arguments() -> "Options":
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  %(prog)s file.wasm                        # Run with Node.js
-  %(prog)s file.html --emrun                # Run with emrun (headless mode)
-  %(prog)s file.wasm -s                     # Run with emrun in browser window
-  %(prog)s file.wasm --show --arg1 value    # Run in browser with arguments
+  %(prog)s file.wasm                        # Run via Node.js
+  %(prog)s file.tar                         # Extract archived .wasm/.html and run
+  %(prog)s file.html --emrun                # Run via emrun (headless mode)
+  %(prog)s file.wasm -s                     # Run via emrun and show browser
+  %(prog)s file.wasm --show --arg1 value    # Run via emrun in browser passing arguments
         """
-    )
-    
-    parser.add_argument(
-        'file',
-        help='HTML or WASM file to run'
     )
     
     parser.add_argument(
@@ -303,35 +303,48 @@ Examples:
     parser.add_argument(
         '--show', '-s',
         action='store_true',
-        help='Show in browser window instead of headless mode (implies --emrun)'
+        help='Use emrun and show browser window (not headless, implies --emrun)'
     )
     
     parser.add_argument(
-        'args',
-        nargs='*',
-        help='Additional arguments to pass to the runner'
+        'file',
+        metavar='file [args ...]',
+        help='html, wasm or tar file to run w/ optional arguments passed to the WASM program'
     )
+    # Don't use optional positional nargs='*' allowing to capture -x/--x options after file (captured by parse_known_intermixed_args)
+    # parser.add_argument('args', nargs='*', help='Additional arguments to pass to the WASM program')
 
-    # Use parse_intermixed_args() instead of parse_args() allowing to use --emrun after positional (file) args
-    args = sys.argv[1:]
     # Remove leading '--' if present because Bazel run requires it to separate own and tool args but unfortunately leaves passing to tool,
     #   so argparse sees it as a start of positional arguments
+    args = sys.argv[1:]
     if args and args[0] == '--':
         args = args[1:]
 
-    _log(f"Raw command line arguments: {args}")
-    parsed_args = parser.parse_intermixed_args(args)
+    # Use parse_known_intermixed_args() instead of parse_args() allowing to use --emrun after positional (file) args
+    #   and also to ignore unknown args (passed to the WASM program)
+    _log(f"Parsing: {args}")
+    parsed_args, unknown_args = parser.parse_known_intermixed_args(args)
+    _log(f"  parsed: {parsed_args}")
+    _log(f"  unknown: {unknown_args}")
 
     # If show is enabled, automatically enable emrun
-    use_emrun = parsed_args.emrun or parsed_args.show
+    if parsed_args.emrun or parsed_args.show:
+        emrun = EmrunOptions(
+            show=parsed_args.show,
+        )
+    else:
+        emrun = None
 
     options = Options(
         file=parsed_args.file,
-        use_emrun=use_emrun,
-        show=parsed_args.show,
-        args=parsed_args.args
+        emrun=emrun,
+        args=unknown_args
     )
-    _log(f"Parsed arguments: file={options.file}, emrun={options.use_emrun}, args={options.args}")
+    _log(f"""Options:
+  emrun={options.emrun} 
+  file={options.file} 
+  args={options.args}""")
+
     return options
 
 
@@ -340,7 +353,7 @@ def main() -> int:
     try:
         options = parse_arguments()
         runner = WasmRunner()
-        return runner.run_with_options(options)
+        return runner.run(options)
     except KeyboardInterrupt:
         _log(f"\n{Colors.YELLOW}⚠️  Interrupted by user{Colors.RESET}")
         return 130
