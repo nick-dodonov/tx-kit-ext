@@ -24,9 +24,10 @@ def _log(*args: Any, **kwargs: Any) -> None:
 class EmrunOptions:
     """emrun execution options."""
     show: bool
+    nokill: bool
     
     def __str__(self) -> str:
-        return f"(show={self.show})"
+        return f"(show={self.show}, nokill={self.nokill})"
 
 
 @dataclass
@@ -211,12 +212,13 @@ class WasmRunner:
         if args:
             _log(f"  args: {' '.join(args)}")
         
-        cmd = [
-            'emrun',
-            '--kill_start',
-            '--kill_exit', 
-            '--browser=chrome',
-        ]
+        cmd = ['emrun']
+        
+        # Only add kill arguments if nokill is not enabled
+        if not emrun.nokill:
+            cmd.extend(['--kill_start', '--kill_exit'])
+        
+        cmd.append('--browser=chrome')
         
         # https://peter.sh/experiments/chromium-command-line-switches/
         browser_args = [
@@ -229,7 +231,10 @@ class WasmRunner:
         cmd.append('--browser_args="{}"'.format(' '.join(browser_args)))
 
         cmd.append(str(html_file))
-        cmd.extend(args)
+        if args:
+            cmd.append('--') # Separator for emrun to pass subsequent args to the WASM program
+            cmd.extend(args)
+
         _log(f"  cmd: {' '.join(cmd)}")
         
         return self._execute_command(cmd)
@@ -291,6 +296,7 @@ Examples:
   %(prog)s file.html --emrun                # Run via emrun (headless mode)
   %(prog)s file.wasm -s                     # Run via emrun and show browser
   %(prog)s file.wasm --show --arg1 value    # Run via emrun in browser passing arguments
+  %(prog)s file.wasm -n                     # Run via emrun, show browser, no kill existing instances
         """
     )
     
@@ -304,6 +310,12 @@ Examples:
         '--show', '-s',
         action='store_true',
         help='Use emrun and show browser window (not headless, implies --emrun)'
+    )
+    
+    parser.add_argument(
+        '--nokill', '-n',
+        action='store_true',
+        help='Use emrun without killing existing browser instances (implies --emrun and --show)'
     )
     
     parser.add_argument(
@@ -327,10 +339,12 @@ Examples:
     _log(f"  parsed: {parsed_args}")
     _log(f"  unknown: {unknown_args}")
 
+    # If nokill is enabled, automatically enable emrun and show
     # If show is enabled, automatically enable emrun
-    if parsed_args.emrun or parsed_args.show:
+    if parsed_args.emrun or parsed_args.show or parsed_args.nokill:
         emrun = EmrunOptions(
-            show=parsed_args.show,
+            show=parsed_args.show or parsed_args.nokill,
+            nokill=parsed_args.nokill,
         )
     else:
         emrun = None
