@@ -210,10 +210,16 @@ class WasmRunner:
             '--browser=chrome',
         ]
         
+        # https://peter.sh/experiments/chromium-command-line-switches/
+        browser_args = [
+            "--disable-background-networking", # Disable various network services (including prefetching and update checks)
+        ]
         # Add headless mode unless show is enabled
         if not show:
-            cmd.append('--browser_args=-headless')
-            
+            browser_args.append("--headless")
+
+        cmd.append('--browser_args="{}"'.format(' '.join(browser_args)))
+
         cmd.append(str(html_file))
         cmd.extend(args)
         _log(f"  cmd: {' '.join(cmd)}")
