@@ -25,9 +25,10 @@ class EmrunOptions:
     """emrun execution options."""
     show: bool
     nokill: bool
+    devtool: bool
     
     def __str__(self) -> str:
-        return f"(show={self.show}, nokill={self.nokill})"
+        return f"(show={self.show}, nokill={self.nokill}, devtool={self.devtool})"
 
 
 @dataclass
@@ -224,6 +225,11 @@ class WasmRunner:
         browser_args = [
             "--disable-background-networking", # Disable various network services (including prefetching and update checks)
         ]
+        
+        # Add devtools if enabled
+        if emrun.devtool:
+            browser_args.append("--auto-open-devtools-for-tabs") # Open devtools for each tab (intended to be used by developers and automation to not require user interaction for opening DevTools)
+        
         # Add headless mode unless show is enabled
         if not emrun.show:
             browser_args.append("--headless")
@@ -297,6 +303,7 @@ Examples:
   %(prog)s file.wasm -s                     # Run via emrun and show browser
   %(prog)s file.wasm --show --arg1 value    # Run via emrun in browser passing arguments
   %(prog)s file.wasm -n                     # Run via emrun, show browser, no kill existing instances
+  %(prog)s file.wasm -s -d                  # Run via emrun, show browser with DevTools
         """
     )
     
@@ -316,6 +323,12 @@ Examples:
         '--nokill', '-n',
         action='store_true',
         help='Use emrun without killing existing browser instances (implies --emrun and --show)'
+    )
+    
+    parser.add_argument(
+        '--devtool', '-d',
+        action='store_true',
+        help='Use emrun and open browser DevTools automatically (implies --emrun)'
     )
     
     parser.add_argument(
@@ -341,10 +354,12 @@ Examples:
 
     # If nokill is enabled, automatically enable emrun and show
     # If show is enabled, automatically enable emrun
-    if parsed_args.emrun or parsed_args.show or parsed_args.nokill:
+    # If devtool is enabled, automatically enable emrun
+    if parsed_args.emrun or parsed_args.show or parsed_args.nokill or parsed_args.devtool:
         emrun = EmrunOptions(
-            show=parsed_args.show or parsed_args.nokill,
+            show=parsed_args.show or parsed_args.nokill or parsed_args.devtool,
             nokill=parsed_args.nokill,
+            devtool=parsed_args.devtool,
         )
     else:
         emrun = None
