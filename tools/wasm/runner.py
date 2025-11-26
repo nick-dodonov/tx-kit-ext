@@ -322,13 +322,13 @@ Examples:
     parser.add_argument(
         '--nokill', '-n',
         action='store_true',
-        help='Use emrun without killing existing browser instances (implies --emrun and --show)'
+        help='Use emrun without killing existing browser instances (implies --show)'
     )
     
     parser.add_argument(
         '--devtool', '-d',
         action='store_true',
-        help='Use emrun and open browser DevTools automatically (implies --emrun)'
+        help='Use emrun and open browser DevTools automatically (implies --nokill)'
     )
     
     parser.add_argument(
@@ -355,10 +355,13 @@ Examples:
     # If nokill is enabled, automatically enable emrun and show
     # If show is enabled, automatically enable emrun
     # If devtool is enabled, automatically enable emrun
-    if parsed_args.emrun or parsed_args.show or parsed_args.nokill or parsed_args.devtool:
+    if parsed_args.emrun or \
+       parsed_args.show or \
+       parsed_args.nokill or \
+       parsed_args.devtool:
         emrun = EmrunOptions(
             show=parsed_args.show or parsed_args.nokill or parsed_args.devtool,
-            nokill=parsed_args.nokill,
+            nokill=parsed_args.nokill or parsed_args.devtool,
             devtool=parsed_args.devtool,
         )
     else:
