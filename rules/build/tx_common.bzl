@@ -16,7 +16,7 @@ def _get_default_copts():
 def _get_default_cxxopts():
     """Returns default platform-specific cxxopts for tx targets."""
     return [
-        "-std=c++20",  # Use C++20 standard
+        "-std=c++23",  # Use C++23 standard
         "-fno-exceptions",  # Disable exceptions globally
     ]
 
