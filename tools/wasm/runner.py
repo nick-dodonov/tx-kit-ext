@@ -224,6 +224,9 @@ class WasmRunner:
         # https://peter.sh/experiments/chromium-command-line-switches/
         browser_args = [
             "--disable-background-networking", # Disable various network services (including prefetching and update checks)
+            "--allow-insecure-localhost", # Allow insecure connections to localhost
+            # "--cors-exempt-headers", # Disable CORS for all headers (to allow local file access)
+            # "--disable-web-security", # Disable same-origin policy (to allow local file access)
         ]
         
         # Add devtools if enabled
