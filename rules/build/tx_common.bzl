@@ -15,10 +15,16 @@ def _get_default_copts():
 
 def _get_default_cxxopts():
     """Returns default platform-specific cxxopts for tx targets."""
-    return [
-        "-std=c++23",  # Use C++23 standard
-        "-fno-exceptions",  # Disable exceptions globally
-    ]
+    return select({
+        "//conditions:default": [
+            "-std=c++23",  # Use C++23 standard
+            "-fno-exceptions",  # Disable exceptions globally
+        ],
+        "@platforms//os:windows": [
+            "/std:c++23",  # Use C++23 standard
+            #TODO: Find equivalent for MSVC - how to disable default /EHsc? also enable _HAS_EXCEPTIONS=0 for stl
+        ]
+    })
 
 def _get_default_linkopts():
     """Returns default platform-specific linkopts for tx targets."""
