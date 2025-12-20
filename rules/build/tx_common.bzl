@@ -21,7 +21,7 @@ def _get_default_cxxopts():
             "-fno-exceptions",  # Disable exceptions globally
         ],
         "@platforms//os:windows": [
-            "/std:c++23",  # Use C++23 standard
+            "/std:c++latest",  # Use C++23 standard
             #TODO: Find equivalent for MSVC - how to disable default /EHsc? also enable _HAS_EXCEPTIONS=0 for stl
         ]
     })
