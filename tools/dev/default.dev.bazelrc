@@ -12,7 +12,7 @@
 # build --config=wasm
 
 # Workaround for CLion w/ Bazel project (otherwise it uses c++17 for syntax not using external compile_commands.json)
-# TODO: make issue in https://github.com/bazelbuild/intellij
+# !!! Fixed in plugin 2025.12.16 "Add support for cxxopts and conlyopts" https://github.com/bazelbuild/intellij/releases/tag/2025.12.16.0 !!!
 # build --cxxopt="-std=c++23"
 
 #### Dependencies overrides
