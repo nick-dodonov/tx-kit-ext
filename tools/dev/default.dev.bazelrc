@@ -64,8 +64,8 @@ build:ultra-minimal --config=strip
 # ],
 
 #### Local development with preinstalled tools
-build:local-tools --action_env=PATH
-build:local-tools --host_action_env=PATH
+build:local-path --action_env=PATH
+build:local-path --host_action_env=PATH
 build:local-tools --extra_toolchains=@rules_foreign_cc//toolchains:preinstalled_cmake_toolchain
 build:local-tools --extra_toolchains=@rules_foreign_cc//toolchains:preinstalled_make_toolchain
 build:local-tools --extra_toolchains=@rules_foreign_cc//toolchains:preinstalled_ninja_toolchain
