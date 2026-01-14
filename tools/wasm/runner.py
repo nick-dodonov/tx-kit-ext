@@ -293,6 +293,113 @@ class WasmRunner:
             return self.run_with_node(html_file, options.args)
 
 
+def _get_runfiles_root() -> Optional[Path]:
+    """Detect if we're running in bazel runfiles context and return the root path.
+    
+    Returns:
+        Path to runfiles root (_main directory) if detected, None otherwise
+    """
+    cwd = Path.cwd()
+    # Check if we're in a runfiles directory structure
+    # PWD will be something like: .../target.runfiles/_main
+    if cwd.name == '_main' and cwd.parent.name.endswith('.runfiles'):
+        return cwd
+    return None
+
+
+def _parse_env_file(env_file: Path) -> List[str]:
+    """Parse .env file and extract WASM_RUNNER_ARGS.
+    
+    Args:
+        env_file: Path to the .env file to parse
+    
+    Returns:
+        List of parsed arguments
+    """
+    try:
+        with open(env_file, 'r') as f:
+            content = f.read()
+            _log(f"  content: {content.strip()}")
+            
+            # Parse WASM_RUNNER_ARGS variable
+            args = []
+            for line in content.splitlines():
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue
+                
+                # Support WASM_RUNNER_ARGS
+                if line.startswith('WASM_RUNNER_ARGS='):
+                    # Extract value after '='
+                    value = line.split('=', 1)[1].strip()
+                    # Remove quotes if present
+                    if value.startswith('"') and value.endswith('"'):
+                        value = value[1:-1]
+                    elif value.startswith("'") and value.endswith("'"):
+                        value = value[1:-1]
+                    
+                    # Split value into arguments
+                    import shlex
+                    args.extend(shlex.split(value))
+            
+            if args:
+                _log(f"  parsed args: {args}")
+            else:
+                _log(f"  no WASM_RUNNER_ARGS variable found")
+            
+            return args
+            
+    except Exception as e:
+        _log(f"  {Colors.RED}❌ Error reading file: {e}{Colors.RESET}")
+        return []
+
+
+def read_env_file(file_path: str) -> List[str]:
+    """Read .env file and extract WASM_RUNNER_ARGS arguments.
+    
+    Args:
+        file_path: Path to the target file (will look for .env file in same directory)
+    
+    Returns:
+        List of arguments parsed from .env file, or empty list if not found
+    """
+    _log(f"{Colors.YELLOW}📄 Looking for .env file:{Colors.RESET}")
+    
+    # Strategy 1: If we're in runfiles directory (bazel run), look for .env relative to runfiles root
+    runfiles_root = _get_runfiles_root()
+    if runfiles_root:
+        _log(f"  Detected runfiles context: {runfiles_root}")
+        
+        # Extract relative path from file_path
+        # file_path is like: /private/var/.../bazel-out/darwin_arm64-dbg-wasm/bin/demo/try-imgui-2/try-imgui-2
+        # We need: demo/try-imgui-2
+        file_path_str = str(file_path)
+        if '/bin/' in file_path_str:
+            # Extract everything after '/bin/'
+            rel_path = file_path_str.split('/bin/', 1)[-1]
+            # Remove the target name at the end to get directory
+            rel_dir = str(Path(rel_path).parent)
+            
+            env_file = runfiles_root / rel_dir / ".env"
+            _log(f"  .env runfiles path: {env_file}")
+            
+            if env_file.exists():
+                _log(f"  {Colors.GREEN}.env found in runfiles{Colors.RESET}")
+                return _parse_env_file(env_file)
+
+    # Strategy 2: Look for .env in the same directory as the target file (direct execution)
+    target_dir = Path(file_path).parent
+    env_file = target_dir / ".env"
+    _log(f"  .env direct path: {env_file}")
+
+    if env_file.exists():
+        _log(f"  {Colors.GREEN}.env found in direct path{Colors.RESET}")
+        return _parse_env_file(env_file)
+
+    _log(f"  .env not found")
+    return []
+
+
 def parse_arguments() -> "Options":
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
@@ -355,6 +462,27 @@ Examples:
     _log(f"  parsed: {parsed_args}")
     _log(f"  unknown: {unknown_args}")
 
+    # Read .env file for WASM_RUNNER_ARGS variable and parse additional args from it
+    env_args = read_env_file(parsed_args.file)
+    if env_args:
+        _log(f"Merging args from .env file with command line args:")
+        # Parse env args with a dummy file argument to satisfy the parser
+        # Command line args will override .env args
+        env_parsed, env_unknown = parser.parse_known_intermixed_args(['dummy_file'] + env_args)
+        _log(f"  env parsed: {env_parsed}")
+        _log(f"  env unknown: {env_unknown}")
+        
+        # Merge: command line args override .env args (only if not already set from command line)
+        for key, value in vars(env_parsed).items():
+            if key != 'file' and not getattr(parsed_args, key):  # Don't override if already set
+                setattr(parsed_args, key, value)
+        
+        # Add env unknown args to the beginning (so they can be overridden by command line unknown args)
+        unknown_args = env_unknown + unknown_args
+        _log(f"  merged parsed: {parsed_args}")
+        _log(f"  merged unknown: {unknown_args}")
+
+
     # If nokill is enabled, automatically enable emrun and show
     # If show is enabled, automatically enable emrun
     # If devtool is enabled, automatically enable emrun
@@ -375,6 +503,7 @@ Examples:
         emrun=emrun,
         args=unknown_args
     )
+    # _log(f"""Options: {options}""")
     _log(f"""Options:
   emrun={options.emrun} 
   file={options.file} 
@@ -383,7 +512,28 @@ Examples:
     return options
 
 
+def __log_startup_info() -> None:
+    _log(f"{Colors.YELLOW}📋 Arguments:{Colors.RESET}")
+    _log(f"  sys.argv: {sys.argv}")
+    # _log(f"  os.environ keys: {list(os.environ.keys())}")
+    
+    _log(f"{Colors.YELLOW}📂 Current directory:{Colors.RESET}")
+    _log(f"  {os.getcwd()}")
+    _log(f"{Colors.YELLOW}📂 Directory contents:{Colors.RESET}")
+    for item in sorted(os.listdir('.')):
+        item_path = Path(item)
+        if item_path.is_dir():
+            _log(f"  📁 {item}/")
+        else:
+            _log(f"  📄 {item}")
+    _log(f"{Colors.YELLOW}📋 Environment:{Colors.RESET}")
+    import pprint
+    pprint.pprint(dict(os.environ))
+    sys.exit(1)
+
+
 def main() -> int:
+    # __log_startup_info()
     """Main entry point."""
     try:
         options = parse_arguments()
