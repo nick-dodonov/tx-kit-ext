@@ -15,5 +15,6 @@ def tx_binary(name, **kwargs):
         copts = tx_cc.get_copts(kwargs.pop("copts", [])),
         cxxopts = tx_cc.get_cxxopts(kwargs.pop("cxxopts", [])),
         linkopts = tx_cc.get_linkopts(kwargs.pop("linkopts", [])),
+        stamp = kwargs.pop("stamp", 1),
         **kwargs
     )

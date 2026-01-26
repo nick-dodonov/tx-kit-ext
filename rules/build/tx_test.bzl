@@ -16,6 +16,7 @@ def tx_test(name, **kwargs):
         cxxopts = tx_cc.get_cxxopts(kwargs.pop("cxxopts", [])),
         linkopts = tx_cc.get_linkopts(kwargs.pop("linkopts", [])),
         size = kwargs.pop("size", "small"),
+        stamp = kwargs.pop("stamp", 1),
         testonly = True,
         visibility = ["//visibility:private"],
         **kwargs
