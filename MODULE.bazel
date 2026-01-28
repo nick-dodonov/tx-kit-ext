@@ -30,7 +30,7 @@ bazel_dep(name = "emsdk", version = "4.0.17")
 # )
 
 # Tools dependencies
-bazel_dep(name = "rules_python", version = "1.8.1")
+bazel_dep(name = "rules_python", version = "1.8.2")
 
 pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
 pip.parse(
