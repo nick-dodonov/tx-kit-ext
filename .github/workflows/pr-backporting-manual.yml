@@ -27,7 +27,7 @@ jobs:
     #   pull-requests: write # to allow creating pull requests
     steps:
       - name: Backporting
-        uses: kiegroup/git-backporting@v4.8.6
+        uses: kiegroup/git-backporting@v4.8.7
         with:
           target-branch: ${{ inputs.targetBranch }}
           pull-request: ${{ inputs.pullRequest }}
