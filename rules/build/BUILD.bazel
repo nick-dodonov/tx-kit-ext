@@ -1,6 +1,7 @@
+# ???
 exports_files([
-    "run-wasm.sh",
     "tx_common.bzl",
+    "tx_library.bzl", 
     "tx_binary.bzl", 
     "tx_test.bzl",
 ])

@@ -400,7 +400,7 @@ def read_env_file(file_path: str) -> List[str]:
     return []
 
 
-def parse_arguments() -> "Options":
+def parse_arguments(args : list[str]) -> "Options":
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
         description="WASM Runner - Run WebAssembly builds via Node.js or emrun",
@@ -451,7 +451,6 @@ Examples:
 
     # Remove leading '--' if present because Bazel run requires it to separate own and tool args but unfortunately leaves passing to tool,
     #   so argparse sees it as a start of positional arguments
-    args = sys.argv[1:]
     if args and args[0] == '--':
         args = args[1:]
 
@@ -532,11 +531,11 @@ def __log_startup_info() -> None:
     sys.exit(1)
 
 
-def main() -> int:
-    # __log_startup_info()
+def main(args : list[str]) -> int:
+    #__log_startup_info()
     """Main entry point."""
     try:
-        options = parse_arguments()
+        options = parse_arguments(args)
         runner = WasmRunner()
         return runner.run(options)
     except KeyboardInterrupt:
@@ -551,4 +550,4 @@ if __name__ == "__main__":
     # TODO: pass TESTBRIDGE_TEST_ONLY environment variable to executor supporting bazel run/test --test_filter=
     # import pprint
     # pprint.pprint(dict(os.environ))
-    sys.exit(main())
+    sys.exit(main(sys.argv[1:]))

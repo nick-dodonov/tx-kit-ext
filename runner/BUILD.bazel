@@ -1,0 +1,18 @@
+load("@rules_python//python:defs.bzl", "py_library", "py_binary")
+
+py_library(
+    name = "runner_lib",
+    srcs = glob(["src/runner/*.py"]),
+    imports = ["src"],
+    # https://github.com/bazel-contrib/rules_python/tree/main/python/runfiles
+    deps = ["@rules_python//python/runfiles"],
+    visibility = ["//visibility:public"],
+)
+
+py_binary(
+    name = "runner",
+    deps = [":runner_lib"],
+    srcs = ["src/main.py"],
+    main = "src/main.py",
+    visibility = ["//visibility:public"],
+)
