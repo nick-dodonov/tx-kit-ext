@@ -4,8 +4,12 @@ py_library(
     name = "runner_lib",
     srcs = glob(["src/runner/*.py"]),
     imports = ["src"],
-    # https://github.com/bazel-contrib/rules_python/tree/main/python/runfiles
-    deps = ["@rules_python//python/runfiles"],
+    deps = [
+        # https://github.com/bazel-contrib/rules_python/tree/main/python/runfiles
+        "@rules_python//python/runfiles",
+        # https://github.com/tartley/colorama
+        "@pypi//colorama",
+    ],
     visibility = ["//visibility:public"],
 )
 

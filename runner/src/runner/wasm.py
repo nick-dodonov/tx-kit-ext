@@ -7,7 +7,6 @@ Supports both test mode (bazel test) and run mode (bazel run).
 
 import argparse
 import os
-import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -186,7 +185,7 @@ class WasmRunner:
         
         raise FileNotFoundError(error_msg)
     
-    def run_with_node(self, html_file: Path, args: List[str]) -> int:
+    def make_cmd_with_node(self, html_file: Path, args: List[str]) -> List[str]:
         """Run WASM using Node.js (test mode)."""
         _log(f"{Colors.YELLOW}🚀 Test mode (via node):{Colors.RESET}")
         _log(f"  cwd: {os.getcwd()}")
@@ -201,11 +200,9 @@ class WasmRunner:
             _log(f"  args: {' '.join(args)}")
         
         cmd = ['node', str(js_file)] + args
-        _log(f"  cmd: {' '.join(cmd)}")
-        
-        return self._execute_command(cmd)
+        return cmd
 
-    def run_with_emrun(self, html_file: Path, args: List[str], emrun: EmrunOptions) -> int:
+    def make_cmd_with_emrun(self, html_file: Path, args: List[str], emrun: EmrunOptions) -> List[str]:
         """Run WASM using emrun (run mode)."""
         _log(f"{Colors.YELLOW}🚀 Run mode (via emrun):{Colors.RESET}")
         _log(f"  cwd: {os.getcwd()}")
@@ -243,54 +240,24 @@ class WasmRunner:
         if args:
             cmd.append('--') # Separator for emrun to pass subsequent args to the WASM program
             cmd.extend(args)
+        return cmd
 
-        _log(f"  cmd: {' '.join(cmd)}")
-        
-        return self._execute_command(cmd)
-    
-    def _execute_command(self, cmd: List[str]) -> int:
-        """Execute command with proper output formatting."""
-        _log(f"{Colors.LIGHT_BLUE}{'>' * 64}{Colors.RESET}")
-        
-        try:
-            result = subprocess.run(cmd, check=False)
-            exit_code = result.returncode
-        except FileNotFoundError as e:
-            _log(f"{Colors.RED}❌ Command not found: {cmd[0]}{Colors.RESET}")
-            _log(f"Error: {e}")
-            exit_code = 127
-        except Exception as e:
-            _log(f"{Colors.RED}❌ Execution error: {e}{Colors.RESET}")
-            exit_code = 1
-        
-        _log(f"{Colors.LIGHT_BLUE}{'<' * 64}{Colors.RESET}")
-        
-        if exit_code == 0:
-            _log(f"{Colors.GREEN}✅ Success: {exit_code}{Colors.RESET}")
-        else:
-            _log(f"{Colors.RED}❌ Error: {exit_code}{Colors.RESET}")
-        
-        return exit_code
-    
-    def run(self, options: Options) -> int:
-        """Main run method."""
+    def make_cmd(self, options: Options) -> List:
         self.print_header()
         
         # Validate emrun usage in test mode
         if options.emrun and self.bazel_test and not self.build_working_dir:
-            _log(f"{Colors.RED}❌ Error: --emrun cannot be used in test mode{Colors.RESET}")
-            return 1
+            raise ValueError("Cannot use --emrun in test mode without BUILD_WORKING_DIRECTORY")
         
         try:
             html_file = self.find_html_file(options.file)
         except FileNotFoundError as e:
-            _log(f"{Colors.RED}❌ {e}{Colors.RESET}")
-            return 1
+            raise e
 
         if options.emrun:
-            return self.run_with_emrun(html_file, options.args, options.emrun)
+            return self.make_cmd_with_emrun(html_file, options.args, options.emrun)
         else:
-            return self.run_with_node(html_file, options.args)
+            return self.make_cmd_with_node(html_file, options.args)
 
 
 def _get_runfiles_root() -> Optional[Path]:
@@ -363,7 +330,7 @@ def read_env_file(file_path: str) -> List[str]:
     Returns:
         List of arguments parsed from .env file, or empty list if not found
     """
-    _log(f"{Colors.YELLOW}📄 Looking for .env file:{Colors.RESET}")
+    _log(f"{Colors.YELLOW}📄 WASM Looking for .env:{Colors.RESET}")
     
     # Strategy 1: If we're in runfiles directory (bazel run), look for .env relative to runfiles root
     runfiles_root = _get_runfiles_root()
@@ -456,7 +423,7 @@ Examples:
 
     # Use parse_known_intermixed_args() instead of parse_args() allowing to use --emrun after positional (file) args
     #   and also to ignore unknown args (passed to the WASM program)
-    _log(f"Parsing: {args}")
+    _log(f"{Colors.YELLOW}⚙️  WASM Parsing:{Colors.RESET} {args}")
     parsed_args, unknown_args = parser.parse_known_intermixed_args(args)
     _log(f"  parsed: {parsed_args}")
     _log(f"  unknown: {unknown_args}")
@@ -502,7 +469,6 @@ Examples:
         emrun=emrun,
         args=unknown_args
     )
-    # _log(f"""Options: {options}""")
     _log(f"""Options:
   emrun={options.emrun} 
   file={options.file} 
@@ -511,43 +477,7 @@ Examples:
     return options
 
 
-def __log_startup_info() -> None:
-    _log(f"{Colors.YELLOW}📋 Arguments:{Colors.RESET}")
-    _log(f"  sys.argv: {sys.argv}")
-    # _log(f"  os.environ keys: {list(os.environ.keys())}")
-    
-    _log(f"{Colors.YELLOW}📂 Current directory:{Colors.RESET}")
-    _log(f"  {os.getcwd()}")
-    _log(f"{Colors.YELLOW}📂 Directory contents:{Colors.RESET}")
-    for item in sorted(os.listdir('.')):
-        item_path = Path(item)
-        if item_path.is_dir():
-            _log(f"  📁 {item}/")
-        else:
-            _log(f"  📄 {item}")
-    _log(f"{Colors.YELLOW}📋 Environment:{Colors.RESET}")
-    import pprint
-    pprint.pprint(dict(os.environ))
-    sys.exit(1)
-
-
-def main(args : list[str]) -> int:
-    #__log_startup_info()
-    """Main entry point."""
-    try:
-        options = parse_arguments(args)
-        runner = WasmRunner()
-        return runner.run(options)
-    except KeyboardInterrupt:
-        _log(f"\n{Colors.YELLOW}⚠️  Interrupted by user{Colors.RESET}")
-        return 130
-    except Exception as e:
-        _log(f"{Colors.RED}❌ Unexpected error: {e}{Colors.RESET}")
-        return 1
-
-
-if __name__ == "__main__":
-    # TODO: pass TESTBRIDGE_TEST_ONLY environment variable to executor supporting bazel run/test --test_filter=
-    # import pprint
-    # pprint.pprint(dict(os.environ))
-    sys.exit(main(sys.argv[1:]))
+def make_wrapper_cmd(args: List[str]) -> List[str]:
+    options = parse_arguments(args)
+    runner = WasmRunner()
+    return runner.make_cmd(options)
