@@ -1,5 +1,21 @@
 load("@rules_python//python:defs.bzl", "py_binary", "py_test")
 
+# Shared attributes for both rule and macro
+_SHARED_ATTRS = {
+    "target_binary": attr.label(
+        allow_single_file = True,
+        mandatory = True,
+        doc = "The binary target to wrap",
+    ),
+    "target_args": attr.string_list(
+        default = [],
+        doc = "Arguments to pass to the target binary when running",
+    ),
+    "platform": attr.string(
+        default = "auto",
+        doc = "The platform to run the target binary on (e.g., 'wasm')",
+    ),
+}
 
 # https://bazel.build/extending/rules
 def _run_wrapper_script_impl(ctx):
@@ -42,26 +58,15 @@ runner.start(options)
 
 run_wrapper_script = rule(
     implementation = _run_wrapper_script_impl,
-    attrs = {
+    attrs = _SHARED_ATTRS | {
         #RUNNER-BINARY:
         # "runner_binary": attr.label(
+        #     allow_single_file = True,
         #     default = Label(":runner"),
         #     executable = True,
         #     cfg = "exec",
+        #     doc = "Optional runner binary to execute the target binary (e.g., for specific platforms)",
         # ),
-        "target_binary": attr.label(
-            allow_single_file = True,
-            mandatory = True,
-            doc = "The binary target to wrap",
-        ),
-        "target_args": attr.string_list(
-            default = [],
-            doc = "Arguments to pass to the target binary when running",
-        ),
-        "platform": attr.string( #TODO: make options configurable
-            default = "auto",
-            doc = "The platform to run the target binary on (e.g., 'wasm')",
-        ),
     },
     executable = True,
 )
@@ -96,23 +101,10 @@ def _run_wrapper_impl(name, visibility, target_binary, target_args, platform, is
 
 run_wrapper = macro(
     implementation = _run_wrapper_impl,
-    attrs = {
-        "target_binary": attr.label(
-            allow_single_file = True,
-            mandatory = True,
-            doc = "The binary target to wrap",
-        ),
-        "target_args": attr.string_list(
-            default = [],
-            doc = "Arguments to pass to the target binary when running",
-        ),
-        "platform": attr.string( #TODO: make options configurable
-            default = "auto",
-            doc = "The platform to run the target binary on (e.g., 'wasm')",
-        ),
+    attrs = _SHARED_ATTRS | {
         "is_test": attr.bool(
-            default = False, 
-            configurable = False, 
+            default = False,
+            configurable = False,
             doc = "If true, creates a target wrapper for test binary target",
         ),
     },
