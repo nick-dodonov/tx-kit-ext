@@ -1,6 +1,7 @@
 """Build definitions for tx_test rule (cc_test wrapper w/ default build settings for multi-platform runs)."""
 
 load("@rules_cc//cc:cc_test.bzl", "cc_test")
+load("//runner:defs.bzl", "run_wrapper")
 load(":tx_common.bzl", "tx_cc")
 
 def tx_test(name, **kwargs):
@@ -10,14 +11,26 @@ def tx_test(name, **kwargs):
         name: The name of the target.
         **kwargs: Additional keyword arguments passed to cc_test.
     """
+    bin_name = name
     cc_test(
-        name = name,
+        name = bin_name,
         copts = tx_cc.get_copts(kwargs.pop("copts", [])),
         cxxopts = tx_cc.get_cxxopts(kwargs.pop("cxxopts", [])),
         linkopts = tx_cc.get_linkopts(kwargs.pop("linkopts", [])),
         size = kwargs.pop("size", "small"),
-        stamp = kwargs.pop("stamp", 1),
+        visibility = kwargs.get("visibility", ["//visibility:private"]),
         testonly = True,
-        visibility = ["//visibility:private"],
         **kwargs
+    )
+
+    run_wrapper(
+        name = "{}.run".format(name),
+        target_binary = ":{}".format(bin_name),
+        target_args = kwargs.get("args", []),
+        platform = select({
+            "@platforms//cpu:wasm32": "wasm",
+            "//conditions:default": "auto",
+        }),
+        visibility = kwargs.get("visibility", ["//visibility:private"]),
+        is_test = True,
     )

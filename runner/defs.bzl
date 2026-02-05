@@ -80,6 +80,7 @@ def _run_wrapper_impl(name, visibility, target_binary, target_args, platform, is
         target_binary = target_binary,
         target_args = target_args,
         platform = platform,
+        testonly = is_test,
     )
 
     if not is_test:
@@ -97,6 +98,7 @@ def _run_wrapper_impl(name, visibility, target_binary, target_args, platform, is
             main = ":{}".format(wrapper_script_name),
             deps = [Label("//runner:runner_lib")],
             visibility = visibility,
+            testonly = True,
         )
 
 run_wrapper = macro(

@@ -1,7 +1,8 @@
 from typing import Any
 # https://github.com/tartley/colorama
 from colorama import init, Fore, Back, Style
-init(autoreset=True) # make termcolor work on windows and simplify usage by auto-resetting styles after each print
+#init(autoreset=True) # make termcolor work on windows and simplify usage by auto-resetting styles after each print
+init() # don't auto-reset to allow multi-line styled output
 
 
 def info(*args: Any, **kwargs: Any) -> None:

@@ -10,7 +10,8 @@ import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Any
+from typing import Any
+import runner.cmd
 
 
 def _log(*args: Any, **kwargs: Any) -> None:
@@ -35,7 +36,7 @@ class Options:
     """Command line options."""
     file: str
     emrun: EmrunOptions | None
-    args: List[str]
+    args: list[str]
 
 
 class Colors:
@@ -55,25 +56,8 @@ class WasmRunner:
         self.build_working_dir = os.environ.get('BUILD_WORKING_DIRECTORY')
         self.runfiles_dir = os.environ.get('RUNFILES_DIR')
         self.bazel_test = os.environ.get('BAZEL_TEST')
-        
-    def print_header(self) -> None:
-        """Print the runner header with environment information."""
-        _log(f"{Colors.YELLOW}🚀 WASM Runner:{Colors.RESET}")
-        _log(f"  cwd: {os.getcwd()}")
-        _log(f"  exe: {sys.argv[0]}")
-        _log(f"  args: {' '.join(sys.argv[1:])}")
-
-        if self.build_workspace_dir:
-            _log(f"    BUILD_WORKSPACE_DIRECTORY: {self.build_workspace_dir}")
-        
-        if self.build_working_dir:
-            _log(f"    BUILD_WORKING_DIRECTORY: {self.build_working_dir} (cd into it)")
-            os.chdir(self.build_working_dir)
-        elif self.runfiles_dir:
-            _log(f"    RUNFILES_DIR: {self.runfiles_dir} (cd into it for test mode)")
-            os.chdir(self.runfiles_dir)
     
-    def _extract_from_tar_if_needed(self, base_path: Path) -> Optional[Path]:
+    def _extract_from_tar_if_needed(self, base_path: Path) -> Path | None:
         """Extract files from tar archive if the base file is a tar archive."""
         import tarfile
         import tempfile
@@ -185,9 +169,9 @@ class WasmRunner:
         
         raise FileNotFoundError(error_msg)
     
-    def make_cmd_with_node(self, html_file: Path, args: List[str]) -> List[str]:
+    def make_cmd_with_node(self, html_file: Path, args: list[str]) -> list[str]:
         """Run WASM using Node.js (test mode)."""
-        _log(f"{Colors.YELLOW}🚀 Test mode (via node):{Colors.RESET}")
+        _log(f"{Colors.YELLOW}🚀 WASM Test mode (via node):{Colors.RESET}")
         _log(f"  cwd: {os.getcwd()}")
         _log(f"  html: {html_file}")
         
@@ -202,9 +186,9 @@ class WasmRunner:
         cmd = ['node', str(js_file)] + args
         return cmd
 
-    def make_cmd_with_emrun(self, html_file: Path, args: List[str], emrun: EmrunOptions) -> List[str]:
+    def make_cmd_with_emrun(self, html_file: Path, args: list[str], emrun: EmrunOptions) -> list[str]:
         """Run WASM using emrun (run mode)."""
-        _log(f"{Colors.YELLOW}🚀 Run mode (via emrun):{Colors.RESET}")
+        _log(f"{Colors.YELLOW}🚀 WASM Run mode (via emrun):{Colors.RESET}")
         _log(f"  cwd: {os.getcwd()}")
         _log(f"  html: {html_file}")
         if args:
@@ -242,9 +226,22 @@ class WasmRunner:
             cmd.extend(args)
         return cmd
 
-    def make_cmd(self, options: Options) -> List:
-        self.print_header()
-        
+    def make_command(self, options: Options) -> runner.cmd.Command:
+        """Print the runner header with environment information."""
+        _log(f"{Colors.YELLOW}🚀 WASM Runner:{Colors.RESET}")
+
+        #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        # TODO: replace with external runfiles support !!
+        #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        cwd = None
+        cwd_descr = None
+        if self.build_working_dir:
+            cwd = self.build_working_dir
+            cwd_descr = "BUILD_WORKING_DIRECTORY"
+        elif self.runfiles_dir:  # For test mode, we need to cd into the runfiles directory to access the files correctly
+            cwd = self.runfiles_dir
+            cwd_descr = "RUNFILES_DIR"
+
         # Validate emrun usage in test mode
         if options.emrun and self.bazel_test and not self.build_working_dir:
             raise ValueError("Cannot use --emrun in test mode without BUILD_WORKING_DIRECTORY")
@@ -255,12 +252,18 @@ class WasmRunner:
             raise e
 
         if options.emrun:
-            return self.make_cmd_with_emrun(html_file, options.args, options.emrun)
+            cmd = self.make_cmd_with_emrun(html_file, options.args, options.emrun)
         else:
-            return self.make_cmd_with_node(html_file, options.args)
+            cmd = self.make_cmd_with_node(html_file, options.args)
+            
+        return runner.cmd.Command(
+            cmd=cmd,
+            cwd=cwd,
+            cwd_descr=cwd_descr,
+        )
 
 
-def _get_runfiles_root() -> Optional[Path]:
+def _get_runfiles_root() -> Path | None:
     """Detect if we're running in bazel runfiles context and return the root path.
     
     Returns:
@@ -274,7 +277,7 @@ def _get_runfiles_root() -> Optional[Path]:
     return None
 
 
-def _parse_env_file(env_file: Path) -> List[str]:
+def _parse_env_file(env_file: Path) -> list[str]:
     """Parse .env file and extract WASM_RUNNER_ARGS.
     
     Args:
@@ -321,7 +324,7 @@ def _parse_env_file(env_file: Path) -> List[str]:
         return []
 
 
-def read_env_file(file_path: str) -> List[str]:
+def read_env_file(file_path: str) -> list[str]:
     """Read .env file and extract WASM_RUNNER_ARGS arguments.
     
     Args:
@@ -469,7 +472,7 @@ Examples:
         emrun=emrun,
         args=unknown_args
     )
-    _log(f"""Options:
+    _log(f"""{Colors.YELLOW}⚙️  WASM Options:{Colors.RESET}
   emrun={options.emrun} 
   file={options.file} 
   args={options.args}""")
@@ -477,7 +480,7 @@ Examples:
     return options
 
 
-def make_wrapper_cmd(args: List[str]) -> List[str]:
+def make_wrapper_command(args: list[str]) -> runner.cmd.Command:
     options = parse_arguments(args)
     runner = WasmRunner()
-    return runner.make_cmd(options)
+    return runner.make_command(options)

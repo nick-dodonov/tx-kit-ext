@@ -1,14 +1,13 @@
 import os
 import sys
-import subprocess
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import List
 from python.runfiles import Runfiles
 
 from runner.log import *
 import runner.wasm
+import runner.cmd
 
 
 class Platform(Enum):
@@ -23,7 +22,7 @@ class Options:
     """Start options."""
 
     file: str
-    args: List[str] = field(default_factory=list)
+    args: list[str] = field(default_factory=list)
     platform: Platform = Platform.AUTO
 
 
@@ -53,7 +52,11 @@ def _test_runfiles() -> None:
         rlocation = sys.argv[1]
 
 
-_ENV_PREFIXES = ["BUILD_", "RUNFILES_"] #, "TEST_"]
+_ENV_PREFIXES = [
+    "BUILD_", 
+    "RUNFILES_", 
+    "TEST_",
+]
 
 
 def _log_process_header() -> None:
@@ -79,35 +82,6 @@ def _find_file(file: str) -> tuple[str | None, str]:
     return None, "NOT-FOUND"
 
 
-def _execute_command(platform: Platform, cmd: List[str]) -> int:
-    platform_str = platform.value.upper()
-    info(f"{Fore.LIGHTBLUE_EX}➡️ [{platform_str}]:{Style.RESET_ALL} {cmd}") # ⬇️
-    info(f"{Fore.LIGHTBLUE_EX}{'>' * 64}{Style.RESET_ALL}")
-
-    try:
-        result = subprocess.run(cmd, check=False)
-        exit_code = result.returncode
-    except FileNotFoundError as e:
-        info(f"{Fore.RED}❌ Command not found: {cmd[0]}{Style.RESET_ALL}")
-        info(f"Error: {e}")
-        exit_code = 127
-    except KeyboardInterrupt:
-        info(f"\n{Fore.YELLOW}⚠️ Interrupted by user{Style.RESET_ALL}")
-        exit_code = 130
-    except Exception as e:
-        info(f"{Fore.RED}❌ Execution error: {e}{Style.RESET_ALL}")
-        exit_code = 1
-
-    info(f"{Fore.LIGHTBLUE_EX}{'<' * 64}{Style.RESET_ALL}")
-    finish_prefix = f"{Fore.LIGHTBLUE_EX}⬅️ [{platform_str}]:{Style.RESET_ALL}" # ⬆️ 🏁
-    if exit_code == 0:
-        info(f"{finish_prefix} {Fore.GREEN}✅ Success: {exit_code}{Style.RESET_ALL}")
-    else:
-        info(f"{finish_prefix} {Fore.RED}❌ Error: {exit_code}{Style.RESET_ALL}")
-
-    return exit_code
-
-
 def start(options: Options) -> None:
     _log_process_header()
     info(f"{Style.DIM}  {options}{Style.RESET_ALL}")
@@ -116,15 +90,16 @@ def start(options: Options) -> None:
         file, found_in = _find_file(options.file)
         if not file:
             raise FileNotFoundError(f"Target file not found: {options.file}")
-        info(f"{Style.DIM}  Target({found_in}): {file or options.file}")
+        info(f"{Style.DIM}  Target({found_in}): {file or options.file}{Style.RESET_ALL}")
 
         cmd = [file] + options.args
         if options.platform == Platform.WASM:
-            cmd = runner.wasm.make_wrapper_cmd(cmd)
-
+            command = runner.wasm.make_wrapper_command(cmd)
+        else:
+            command = runner.cmd.Command(cmd=cmd)
     except Exception as e:
         info(f"{Fore.RED}❌ {e}{Style.RESET_ALL}")
         sys.exit(1)
 
-    exit_code = _execute_command(options.platform, cmd)
+    exit_code = command.scoped_execute(f"[{options.platform.value.upper()}]")
     sys.exit(exit_code)
