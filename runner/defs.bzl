@@ -32,7 +32,7 @@ target_binary = "{target_binary}"
 options = runner.Options(
     platform=runner.Platform("{platform}"),
     file=target_binary,
-    args={target_args},
+    args={target_args} + sys.argv[1:],
 )
 runner.start(options)
 """.format(
