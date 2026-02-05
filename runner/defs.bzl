@@ -2,6 +2,10 @@ load("@rules_python//python:defs.bzl", "py_binary", "py_test")
 
 # Shared attributes for both rule and macro
 _SHARED_ATTRS = {
+    "platform": attr.string(
+        default = "auto",
+        doc = "The platform to run the target binary on (e.g., 'wasm')",
+    ),
     "target_binary": attr.label(
         allow_single_file = True,
         mandatory = True,
@@ -10,10 +14,6 @@ _SHARED_ATTRS = {
     "target_args": attr.string_list(
         default = [],
         doc = "Arguments to pass to the target binary when running",
-    ),
-    "platform": attr.string(
-        default = "auto",
-        doc = "The platform to run the target binary on (e.g., 'wasm')",
     ),
 }
 
@@ -73,13 +73,13 @@ run_wrapper_script = rule(
 
 
 # https://bazel.build/extending/macros
-def _run_wrapper_impl(name, visibility, target_binary, target_args, platform, is_test):
+def _run_wrapper_impl(name, visibility, platform, target_binary, target_args, tags, is_test):
     wrapper_script_name = "{}.py".format(name)
     run_wrapper_script(
         name = wrapper_script_name,
+        platform = platform,
         target_binary = target_binary,
         target_args = target_args,
-        platform = platform,
         testonly = is_test,
     )
 
@@ -89,6 +89,7 @@ def _run_wrapper_impl(name, visibility, target_binary, target_args, platform, is
             srcs = [":{}".format(wrapper_script_name)],
             main = ":{}".format(wrapper_script_name),
             deps = [Label("//runner:runner_lib")],
+            tags = tags,
             visibility = visibility,
         )
     else:
@@ -97,6 +98,7 @@ def _run_wrapper_impl(name, visibility, target_binary, target_args, platform, is
             srcs = [":{}".format(wrapper_script_name)],
             main = ":{}".format(wrapper_script_name),
             deps = [Label("//runner:runner_lib")],
+            tags = tags,
             visibility = visibility,
             testonly = True,
         )
@@ -104,6 +106,11 @@ def _run_wrapper_impl(name, visibility, target_binary, target_args, platform, is
 run_wrapper = macro(
     implementation = _run_wrapper_impl,
     attrs = _SHARED_ATTRS | {
+        "tags": attr.string_list(
+            default = [],
+            configurable = False,
+            doc = "Tags to apply to the wrapper target",
+        ),
         "is_test": attr.bool(
             default = False,
             configurable = False,

@@ -17,20 +17,21 @@ def tx_test(name, **kwargs):
         copts = tx_cc.get_copts(kwargs.pop("copts", [])),
         cxxopts = tx_cc.get_cxxopts(kwargs.pop("cxxopts", [])),
         linkopts = tx_cc.get_linkopts(kwargs.pop("linkopts", [])),
-        size = kwargs.pop("size", "small"),
         visibility = kwargs.get("visibility", ["//visibility:private"]),
         testonly = True,
         **kwargs
     )
 
+    wrapper_tags = kwargs.get("tags", []) + ["manual"]  # add "manual" tag to prevent auto-discovery by test runners
     run_wrapper(
         name = "{}.run".format(name),
-        target_binary = ":{}".format(bin_name),
-        target_args = kwargs.get("args", []),
         platform = select({
             "@platforms//cpu:wasm32": "wasm",
             "//conditions:default": "auto",
         }),
+        target_binary = ":{}".format(bin_name),
+        target_args = kwargs.get("args", []),
+        tags = wrapper_tags,
         visibility = kwargs.get("visibility", ["//visibility:private"]),
         is_test = True,
     )
