@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 
 from dataclasses import dataclass, field
@@ -52,10 +53,10 @@ def _test_runfiles() -> None:
         rlocation = sys.argv[1]
 
 
-_ENV_PREFIXES = [
-    "BUILD_", 
-    "RUNFILES_", 
-    "TEST_",
+ENV_REGEXP_FILTERS = [
+    re.compile(r"^BUILD_"),
+    re.compile(r"^RUNFILES_"),
+    re.compile(r"^TEST_(?!.*(_FILE|DIR)$)"),  # Exclude TEST_*_FILE and TEST_*DIR to avoid leaking large unnecessary file paths
 ]
 
 
@@ -65,7 +66,7 @@ def _log_process_header() -> None:
     for index, arg in enumerate(sys.argv):
         info(f"{Style.DIM}  [{index}] {arg}{Style.RESET_ALL}")
     for key, value in sorted(os.environ.items()):
-        if any(key.startswith(prefix) for prefix in _ENV_PREFIXES):
+        if any(pattern.match(key) for pattern in ENV_REGEXP_FILTERS):
             info(f"{Style.DIM}  {key}={value}{Style.RESET_ALL}")
 
 
@@ -78,6 +79,13 @@ def _find_file(file: str) -> tuple[str | None, str]:
         candidate = os.path.join(build_working_dir, file)
         if os.path.exists(candidate):
             return candidate, "BUILD_WORKING_DIRECTORY"
+
+    # Try runfiles
+    runfiles = Runfiles.Create()
+    if runfiles:
+        rlocation = runfiles.Rlocation(file)
+        if rlocation and os.path.exists(rlocation):
+            return rlocation, "RUNFILES"
 
     return None, "NOT-FOUND"
 

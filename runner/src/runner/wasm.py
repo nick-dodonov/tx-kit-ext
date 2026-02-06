@@ -360,10 +360,8 @@ def read_env_file(file_path: str) -> list[str]:
     # Strategy 2: Look for .env in the same directory as the target file (direct execution)
     target_dir = Path(file_path).parent
     env_file = target_dir / ".env"
-    _log(f"  .env direct path: {env_file}")
-
     if env_file.exists():
-        _log(f"  {Colors.GREEN}.env found in direct path{Colors.RESET}")
+        _log(f"  {Colors.GREEN}.env found in direct path: {Colors.RESET} {env_file}")
         return _parse_env_file(env_file)
 
     _log(f"  .env not found")
@@ -429,7 +427,8 @@ Examples:
     _log(f"{Colors.YELLOW}⚙️  WASM Parsing:{Colors.RESET} {args}")
     parsed_args, unknown_args = parser.parse_known_intermixed_args(args)
     _log(f"  parsed: {parsed_args}")
-    _log(f"  unknown: {unknown_args}")
+    if unknown_args:
+        _log(f"  unknown: {unknown_args}")
 
     # Read .env file for WASM_RUNNER_ARGS variable and parse additional args from it
     env_args = read_env_file(parsed_args.file)
@@ -439,7 +438,8 @@ Examples:
         # Command line args will override .env args
         env_parsed, env_unknown = parser.parse_known_intermixed_args(['dummy_file'] + env_args)
         _log(f"  env parsed: {env_parsed}")
-        _log(f"  env unknown: {env_unknown}")
+        if env_unknown:
+            _log(f"  env unknown: {env_unknown}")
         
         # Merge: command line args override .env args (only if not already set from command line)
         for key, value in vars(env_parsed).items():
@@ -449,7 +449,8 @@ Examples:
         # Add env unknown args to the beginning (so they can be overridden by command line unknown args)
         unknown_args = env_unknown + unknown_args
         _log(f"  merged parsed: {parsed_args}")
-        _log(f"  merged unknown: {unknown_args}")
+        if unknown_args:
+            _log(f"  merged unknown: {unknown_args}")
 
 
     # If nokill is enabled, automatically enable emrun and show

@@ -34,7 +34,9 @@ options = runner.Options(
     file=target_binary,
     args={target_args} + sys.argv[1:],
 )
-runner.start(options)
+
+if __name__ == "__main__":
+    runner.start(options)
 """.format(
 #RUNNER-BINARY: runner_binary = '{runner_binary}'
             #RUNNER-BINARY: runner_binary = ctx.executable.runner_binary.short_path,
