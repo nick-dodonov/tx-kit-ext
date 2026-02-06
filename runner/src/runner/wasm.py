@@ -102,7 +102,7 @@ class WasmRunner:
         
         # Strategy 1: Direct file access (common for bazel run)
         if html_file.exists():
-            _log(f"Found HTML file directly: {html_file}")
+            _log(f"  Found HTML file directly: {html_file}")
             return html_file
         
         # Strategy 2: Try in build working directory (bazel run with BUILD_WORKING_DIRECTORY)
@@ -110,13 +110,13 @@ class WasmRunner:
             # Try relative to build working directory
             build_html = Path(self.build_working_dir) / html_file
             if build_html.exists():
-                _log(f"Found HTML file in build working directory: {build_html}")
+                _log(f"  Found HTML file in build working directory: {build_html}")
                 return build_html
             
             # Try in bazel-bin directory
             bazel_bin_html = Path(self.build_working_dir) / "bazel-bin" / html_file
             if bazel_bin_html.exists():
-                _log(f"Found HTML file in bazel-bin: {bazel_bin_html}")
+                _log(f"  Found HTML file in bazel-bin: {bazel_bin_html}")
                 return bazel_bin_html
             
             # Try extracting from tar in bazel-bin
@@ -338,8 +338,6 @@ def read_env_file(file_path: str) -> list[str]:
     # Strategy 1: If we're in runfiles directory (bazel run), look for .env relative to runfiles root
     runfiles_root = _get_runfiles_root()
     if runfiles_root:
-        _log(f"  Detected runfiles context: {runfiles_root}")
-        
         # Extract relative path from file_path
         # file_path is like: /private/var/.../bazel-out/darwin_arm64-dbg-wasm/bin/demo/try-imgui-2/try-imgui-2
         # We need: demo/try-imgui-2

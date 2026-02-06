@@ -23,10 +23,6 @@ def tx_binary(name, **kwargs):
 
     run_wrapper(
         name = "{}.run".format(name),
-        platform = select({
-            "@platforms//cpu:wasm32": "wasm",
-            "//conditions:default": "auto",
-        }),
         target_binary = ":{}".format(bin_name),
         target_args = kwargs.get("args", []),
         tags = kwargs.get("tags", []),

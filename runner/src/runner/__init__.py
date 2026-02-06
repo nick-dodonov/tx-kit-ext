@@ -17,6 +17,9 @@ class Platform(Enum):
     AUTO = "auto"
     WASM = "wasm"
 
+    def __repr__(self) -> str:
+        return str(self)
+
 
 @dataclass
 class Options:
@@ -61,7 +64,6 @@ ENV_REGEXP_FILTERS = [
 
 
 def _log_process_header() -> None:
-    info(f"{Fore.CYAN}⭐ Runner{Style.RESET_ALL}")
     info(f"{Style.DIM}  CWD {os.getcwd()}{Style.RESET_ALL}")
     for index, arg in enumerate(sys.argv):
         info(f"{Style.DIM}  [{index}] {arg}{Style.RESET_ALL}")
@@ -90,24 +92,43 @@ def _find_file(file: str) -> tuple[str | None, str]:
     return None, "NOT-FOUND"
 
 
+def _detect_platform(file: str) -> Platform:
+    wasm_exts = (".html", ".js", ".wasm")
+    real_file = os.path.realpath(file)
+    if real_file.endswith(wasm_exts):
+        info(f"{Style.DIM}  Found WASM extension (realpath): {real_file}{Style.RESET_ALL}")
+        return Platform.WASM
+    for ext in wasm_exts:
+        if os.path.exists(real_file + ext):
+            info(f"{Style.DIM}  Found WASM extension (realpath+ext): {real_file + ext}{Style.RESET_ALL}")
+            return Platform.WASM
+
+    return Platform.AUTO
+
+
 def start(options: Options) -> None:
+    info(f"{Fore.CYAN}{Style.BRIGHT}⭐ Runner:{Style.NORMAL} {options}{Style.RESET_ALL}")
     _log_process_header()
-    info(f"{Style.DIM}  {options}{Style.RESET_ALL}")
 
     try:
         file, found_in = _find_file(options.file)
         if not file:
             raise FileNotFoundError(f"Target file not found: {options.file}")
-        info(f"{Style.DIM}  Target({found_in}): {file or options.file}{Style.RESET_ALL}")
-
-        cmd = [file] + options.args
-        if options.platform == Platform.WASM:
-            command = runner.wasm.make_wrapper_command(cmd)
-        else:
-            command = runner.cmd.Command(cmd=cmd)
+        info(f"{Style.DIM}{Style.BRIGHT}Target ({found_in}):{Style.NORMAL} {file or options.file}{Style.RESET_ALL}")
     except Exception as e:
         info(f"{Fore.RED}❌ {e}{Style.RESET_ALL}")
         sys.exit(1)
 
-    exit_code = command.scoped_execute(f"[{options.platform.value.upper()}]")
+    platform = options.platform
+    if platform == Platform.AUTO:
+        platform = _detect_platform(file)
+        info(f"{Style.BRIGHT}  Detected: {platform}{Style.RESET_ALL}")
+
+    cmd = [file] + options.args
+    if platform == Platform.WASM:
+        command = runner.wasm.make_wrapper_command(cmd)
+    else:
+        command = runner.cmd.Command(cmd=cmd)
+
+    exit_code = command.scoped_execute(f"[{platform.value.upper()}]")
     sys.exit(exit_code)

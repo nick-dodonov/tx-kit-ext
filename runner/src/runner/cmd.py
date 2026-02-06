@@ -24,14 +24,14 @@ class Command:
             result = subprocess.run(self.cmd, cwd=self.cwd, check=False)
             exit_code = result.returncode
         except FileNotFoundError as e:
-            info(f"{Fore.RED}❌ Command not found: {self.cmd[0]}{Style.RESET_ALL}")
+            info(f"{Fore.RED}❌ Execute command not found: {self.cmd[0]}{Style.RESET_ALL}")
             info(f"Error: {e}")
             exit_code = 127
         except KeyboardInterrupt:
-            info(f"\n{Fore.YELLOW}⚠️ Interrupted by user{Style.RESET_ALL}")
+            info(f"\n{Fore.YELLOW}⚠️ Execute interrupted{Style.RESET_ALL}")
             exit_code = 130
         except Exception as e:
-            info(f"{Fore.RED}❌ Execution error: {e}{Style.RESET_ALL}")
+            info(f"{Fore.RED}❌ Execute error: {e}{Style.RESET_ALL}")
             exit_code = 1
 
         info(f"{Fore.LIGHTBLUE_EX}{'<' * 64}{Style.RESET_ALL}")

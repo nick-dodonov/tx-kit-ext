@@ -25,10 +25,6 @@ def tx_test(name, **kwargs):
     wrapper_tags = kwargs.get("tags", []) + ["manual"]  # add "manual" tag to prevent auto-discovery by test runners
     run_wrapper(
         name = "{}.run".format(name),
-        platform = select({
-            "@platforms//cpu:wasm32": "wasm",
-            "//conditions:default": "auto",
-        }),
         target_binary = ":{}".format(bin_name),
         target_args = kwargs.get("args", []),
         tags = wrapper_tags,
