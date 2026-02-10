@@ -9,6 +9,8 @@ py_library(
         "@rules_python//python/runfiles",
         # https://github.com/tartley/colorama
         "@pypi//colorama",
+
+        "@pypi//filetype",
     ],
     visibility = ["//visibility:public"],
 )
