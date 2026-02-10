@@ -21,6 +21,9 @@ bazel_dep(name = "rules_cc", version = "0.2.16")
 bazel_dep(name = "rules_foreign_cc", version = "0.15.1")
 bazel_dep(name = "rules_shell", version = "0.6.1")
 
+# Override protobuf version to avoid Python 3.8-3.10 toolchain requirements
+bazel_dep(name = "protobuf", version = "34.0-rc1")
+
 # WASM build support
 bazel_dep(name = "emsdk", version = "4.0.17")
 #TODO: find the way for local emsdk toolchain via .bazelrc config/overrides (same as w/ make/cmake/ninja/pkg_config/etc)
@@ -31,6 +34,12 @@ bazel_dep(name = "emsdk", version = "4.0.17")
 
 # Tools dependencies
 bazel_dep(name = "rules_python", version = "1.8.3")
+
+python = use_extension("@rules_python//python/extensions:python.bzl", "python")
+python.toolchain(
+    python_version = "3.11",
+    is_default = True,
+)
 
 pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
 pip.parse(

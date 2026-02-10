@@ -24,7 +24,7 @@ def detect_platform(file: str) -> Platform:
             return Platform.WASM
 
     kind = filetype.guess(real_file)
-    if kind and kind.extension is 'tar':
+    if kind and kind.extension == 'tar':
         info(f"{Style.DIM}  Detected 'tar' file (guessing WASM content){Style.RESET_ALL}")
         #TODO: check if it contains wasm files
         return Platform.WASM
