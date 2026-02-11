@@ -1,4 +1,7 @@
 load("@rules_python//python:defs.bzl", "py_library", "py_binary")
+load(":exec_tool.bzl", "exec_tool")
+
+package(default_visibility = ["//visibility:public"])
 
 py_library(
     name = "runner_lib",
@@ -9,10 +12,9 @@ py_library(
         "@rules_python//python/runfiles",
         # https://github.com/tartley/colorama
         "@pypi//colorama",
-
+        # https://github.com/h2non/filetype.py
         "@pypi//filetype",
     ],
-    visibility = ["//visibility:public"],
 )
 
 py_binary(
@@ -20,5 +22,10 @@ py_binary(
     deps = [":runner_lib"],
     srcs = ["src/main.py"],
     main = "src/main.py",
-    visibility = ["//visibility:public"],
+)
+
+# Wrapper that forces runner to be built for exec platform
+exec_tool(
+    name = "host",
+    tool = ":runner",
 )
