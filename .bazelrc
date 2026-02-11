@@ -1,1 +1,4 @@
-try-import %workspace%/.dev.bazelrc
+# Disable Python zipapp on Windows for --run_under compatibility
+startup --windows_enable_symlinks
+build --enable_runfiles
+build --build_python_zip=false # building python zip is slow and deprecated
