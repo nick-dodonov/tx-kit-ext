@@ -5,16 +5,20 @@ def _exec_tool_impl(ctx):
     tool_info = ctx.attr.tool[DefaultInfo]
     tool_exe = tool_info.files_to_run.executable
     
-    # On some platforms (e.g., Windows), a tool may have multiple output files
-    # (e.g., py_binary creates both launcher.exe and launcher script).
-    # Create symlinks for all of them to preserve the full tool structure.
+    # On Windows, py_binary creates both launcher.exe and the script file.
+    # The launcher expects the script to be in the same directory.
+    # Create symlinks for all generated files, preserving their basenames.
     symlinks = []
     executable_symlink = None
     
     for src_file in tool_info.files.to_list():
-        # Preserve file names in a subdirectory to avoid conflicts
-        print("Creating symlink for tool output: {}".format(src_file))
-        symlink = ctx.actions.declare_file(ctx.label.name + "/" + src_file.basename)
+        # Skip source files - only symlink generated outputs
+        if src_file.is_source:
+            continue
+            
+        # Preserve original basename so files can find each other
+        symlink = ctx.actions.declare_file(src_file.basename)
+        #print("Creating symlink for tool output: {} -> {}".format(symlink, src_file))
         ctx.actions.symlink(
             output = symlink,
             target_file = src_file,
@@ -25,15 +29,17 @@ def _exec_tool_impl(ctx):
         if src_file == tool_exe:
             executable_symlink = symlink
     
-    print("Executable symlink for tool output: {}".format(executable_symlink))
+    #print("Executable symlink for tool output: {}".format(executable_symlink))
     if not executable_symlink:
         fail("Executable not found in tool outputs")
     
-    return [DefaultInfo(
-        executable = executable_symlink,
-        files = depset(symlinks),
-        runfiles = tool_info.default_runfiles,
-    )]
+    return [
+        DefaultInfo(
+            executable = executable_symlink,
+            files = depset(symlinks),
+            runfiles = tool_info.default_runfiles,
+        ),
+    ]
 
 exec_tool = rule(
     implementation = _exec_tool_impl,

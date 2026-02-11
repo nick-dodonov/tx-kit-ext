@@ -25,6 +25,8 @@ py_binary(
 )
 
 # Wrapper that forces runner to be built for exec platform
+# It fixes usage of runner on Windows when it's used as a tool under --run_under (e.g. for WASM tests),
+#   because otherwise it would be built for target platform (without .exe) and fail to run python launcher script.
 exec_tool(
     name = "host",
     tool = ":runner",
