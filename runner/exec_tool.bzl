@@ -25,6 +25,7 @@ def _exec_tool_impl(ctx):
         if src_file == tool_exe:
             executable_symlink = symlink
     
+    print("Executable symlink for tool output: {}".format(executable_symlink))
     if not executable_symlink:
         fail("Executable not found in tool outputs")
     

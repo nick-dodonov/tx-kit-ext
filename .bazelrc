@@ -1,3 +1,9 @@
+# For testing locally without depdendant modules 
+#   (similar to default uni.bazelrc configuration)
 startup --windows_enable_symlinks
 build --enable_runfiles
 build --build_python_zip=false # building python zip is slow and deprecated
+
+common:wasm --platform_suffix=wasm
+common:wasm --platforms=@emsdk//:platform_wasm
+common:wasm --extra_toolchains=@bazel_tools//tools/python:autodetecting_toolchain
