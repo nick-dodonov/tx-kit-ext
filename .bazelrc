@@ -1,1 +1,5 @@
 try-import %workspace%/.dev.bazelrc
+
+common:wasm --platform_suffix=wasm
+common:wasm --platforms=@emsdk//:platform_wasm
+common:wasm --extra_toolchains=@bazel_tools//tools/python:autodetecting_toolchain
