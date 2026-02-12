@@ -9,13 +9,14 @@ def _exec_tool_impl(ctx):
     # The launcher.exe expects the script to be in the same directory.
     # Create symlinks for all generated files, preserving their basenames.
     symlinks = []
+    originals = []
     executable_symlink = None
     
     for src_file in tool_info.files.to_list():
         # Skip source files - only symlink generated outputs
         if src_file.is_source:
             continue
-        
+
         # Preserve original basename so files can find each other
         symlink = ctx.actions.declare_file(src_file.basename)
 
@@ -25,6 +26,7 @@ def _exec_tool_impl(ctx):
             target_file = src_file,
         )
         symlinks.append(symlink)
+        originals.append(src_file)
         
         # Track which symlink corresponds to the primary executable
         if src_file == tool_exe:
@@ -33,12 +35,17 @@ def _exec_tool_impl(ctx):
     #print("Executable symlink for tool output: {}".format(executable_symlink))
     if not executable_symlink:
         fail("Executable not found in tool outputs")
-    
+
+    # add original tool files to runfiles so they are available at runtime
+    #runfiles = ctx.runfiles(files = originals)
+    #runfiles = runfiles.merge(tool_info.default_runfiles)
+    runfiles = tool_info.default_runfiles
+
     return [
         DefaultInfo(
             executable = executable_symlink,
             files = depset(symlinks),
-            runfiles = tool_info.default_runfiles,
+            runfiles = runfiles,
         ),
     ]
 
