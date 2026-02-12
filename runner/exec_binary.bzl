@@ -1,9 +1,9 @@
 """Rule to build a tool for the execution platform."""
 
-def _exec_tool_impl(ctx):
+def _exec_binary_impl(ctx):
     # Get the tool built for exec configuration
-    tool_info = ctx.attr.tool[DefaultInfo]
-    tool_exe = tool_info.files_to_run.executable
+    binary_info = ctx.attr.binary[DefaultInfo]
+    binary_exe = binary_info.files_to_run.executable
     
     # On Windows, py_binary creates both launcher.exe and the launcher script file.
     # The launcher.exe expects the script to be in the same directory.
@@ -12,7 +12,7 @@ def _exec_tool_impl(ctx):
     originals = []
     executable_symlink = None
     
-    for src_file in tool_info.files.to_list():
+    for src_file in binary_info.files.to_list():
         # Skip source files - only symlink generated outputs
         if src_file.is_source:
             continue
@@ -29,7 +29,7 @@ def _exec_tool_impl(ctx):
         originals.append(src_file)
         
         # Track which symlink corresponds to the primary executable
-        if src_file == tool_exe:
+        if src_file == binary_exe:
             executable_symlink = symlink
     
     #print("Executable symlink for tool output: {}".format(executable_symlink))
@@ -38,8 +38,8 @@ def _exec_tool_impl(ctx):
 
     # add original tool files to runfiles so they are available at runtime
     #runfiles = ctx.runfiles(files = originals)
-    #runfiles = runfiles.merge(tool_info.default_runfiles)
-    runfiles = tool_info.default_runfiles
+    #runfiles = runfiles.merge(binary_info.default_runfiles)
+    runfiles = binary_info.default_runfiles
 
     return [
         DefaultInfo(
@@ -49,14 +49,26 @@ def _exec_tool_impl(ctx):
         ),
     ]
 
-exec_tool = rule(
-    implementation = _exec_tool_impl,
+exec_binary = rule(
+    implementation = _exec_binary_impl,
     attrs = {
-        "tool": attr.label(
+        "binary": attr.label(
             executable = True,
             mandatory = True,
             cfg = "exec",
         ),
     },
     executable = True,
+)
+
+exec_test = rule(
+    implementation = _exec_binary_impl,
+    attrs = {
+        "binary": attr.label(
+            executable = True,
+            mandatory = True,
+            cfg = "exec",
+        ),
+    },
+    test = True,
 )
