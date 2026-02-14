@@ -22,14 +22,24 @@ class Options:
 
 ENV_REGEXP_FILTERS = [
     # debug: re.compile(r".*"),
-    re.compile(r"^BAZEL"),
+    re.compile(r"^BAZEL(?!ISK_SKIP_WRAPPER$)"),
     re.compile(r"^BUILD_"),
     re.compile(r"^RUNFILES_"),
     re.compile(r"^TEST_(?!.*(_FILE|DIR)$)"),  # Exclude TEST_*_FILE and TEST_*DIR to avoid leaking large unnecessary file paths
 ]
 
 
-def _log_process_header() -> None:
+_logged_header = False
+def log_header_once() -> None:
+    global _logged_header
+
+    if not _logged_header:
+        _logged_header = True
+        #TODO: also add stamp info
+        info(f"{Fore.CYAN}{Style.BRIGHT}⭐ Runner {Style.DIM}(Python: {sys.version.split()[0]}){Style.RESET_ALL}")
+
+
+def _log_process_info() -> None:
     info(f"  {Style.DIM}CWD {os.getcwd()}{Style.RESET_ALL}")
     for index, arg in enumerate(sys.argv):
         info(f"  {Style.DIM}[{index}] {arg}{Style.RESET_ALL}")
@@ -37,6 +47,9 @@ def _log_process_header() -> None:
         if any(pattern.match(key) for pattern in ENV_REGEXP_FILTERS):
             info(f"  {Style.DIM}{key}={value}{Style.RESET_ALL}")
 
+
+def _log_options(options: Options) -> None:
+    info(f"  {Style.DIM}{options}{Style.RESET_ALL}")
 
 def _find_file(file: Path) -> tuple[Path | None, str]:
     if file.exists():
@@ -63,13 +76,14 @@ def _find_file(file: Path) -> tuple[Path | None, str]:
 def _find_file_logged(file: Path) -> Path | None:
     found_file, found_in = _find_file(file)
     if found_file:
-        info(f"  {Style.DIM}File found: {found_file} ({found_in}){Style.RESET_ALL}")
+        info(f"  {Style.DIM}Found: {found_file} # {found_in}{Style.RESET_ALL}")
     return found_file
 
 
 def _main(options: Options) -> int:
-    info(f"{Fore.CYAN}{Style.BRIGHT}⭐ Runner:{Style.NORMAL} {options}{Style.RESET_ALL}")
-    _log_process_header()
+    log_header_once()
+    _log_process_info()
+    _log_options(options)
 
     file = _find_file_logged(options.file)
     if not file:

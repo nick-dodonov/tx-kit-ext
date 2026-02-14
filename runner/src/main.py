@@ -47,5 +47,6 @@ def _parse_args() -> runner.Options:
 
 
 if __name__ == "__main__":
+    runner.log_header_once()
     options = _parse_args()
     runner.start(options)

@@ -20,7 +20,7 @@ class Command:
         cmd_str = shlex.join(self.cmd)
         info(f"{Fore.CYAN}➡️  {scope_prefix}{Style.RESET_ALL}") # ⬇️
         cwd_descr = self.cwd_descr if self.cwd_descr else "CWD" if not self.cwd else None
-        info(f"  {Style.DIM}{f'({cwd_descr}) ' if cwd_descr else ''}cd {cwd}{Style.RESET_ALL}")
+        info(f"  {Style.DIM}cd {cwd}{f' # {cwd_descr}' if cwd_descr else ''}{Style.RESET_ALL}")
         info(f"  {Style.DIM}{cmd_str}{Style.RESET_ALL}")
         self._log_delimiter('>', Fore.LIGHTBLUE_EX)
 

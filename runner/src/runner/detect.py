@@ -35,11 +35,11 @@ def _detect_platform(file: Path) -> Platform:
 
     real_file = file.resolve()
     if real_file != file:
-        info(f"  {Style.DIM}Real path: {real_file}{Style.RESET_ALL}")
+        info(f"  {Style.DIM}Real: {real_file}{Style.RESET_ALL}")
 
     kind = filetype.guess(real_file)
     if kind:
-        info(f"  {Style.DIM}File type: {kind.mime} ({kind.extension}){Style.RESET_ALL}")
+        info(f"  {Style.DIM}Type: {kind.mime} ({kind.extension}){Style.RESET_ALL}")
 
     shebang = _read_shebang(real_file)
     if shebang:
@@ -48,7 +48,7 @@ def _detect_platform(file: Path) -> Platform:
     if kind:
         if kind.extension == "tar":
             # TODO: check if it contains wasm files
-            info(f"  {Style.DIM}Detected 'tar' with WASM content{Style.RESET_ALL}")
+            info(f"  {Style.DIM}Revealed: tar with WASM content{Style.RESET_ALL}")
             return Platform.WASM
 
     if real_file.suffix in _wasm_exts:

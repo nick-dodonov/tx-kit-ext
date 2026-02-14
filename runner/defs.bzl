@@ -61,6 +61,7 @@ def _run_wrapper_impl(name, visibility, target_binary, target_args, tags, is_tes
         target_binary = target_binary,
         target_args = target_args,
         testonly = is_test,
+        visibility = ["//visibility:private"],
     )
 
     if not is_test:
