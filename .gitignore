@@ -19,3 +19,6 @@ Thumbs.db
 *.bak
 *.tmp
 *.log
+
+# Idea
+/.clwb

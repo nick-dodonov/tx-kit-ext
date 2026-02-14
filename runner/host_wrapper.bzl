@@ -6,11 +6,11 @@ Cross-platform solution using cfg=exec for automatic host binary selection.
 def _host_wrapper_impl(ctx):
     """Implementation that creates cross-platform wrapper."""
     binary = ctx.attr.binary
-    
+
     # Get the executable from the binary target (already in exec config)
     binary_files = binary[DefaultInfo].files_to_run
     executable = binary_files.executable
-    
+
     # Get workspace name for runfiles path
     # Handle both main repo and external repos
     if executable.short_path.startswith("../"):
@@ -21,11 +21,11 @@ def _host_wrapper_impl(ctx):
         # Main repository
         workspace_name = ctx.workspace_name
         binary_short_path = executable.short_path
-    
+
     # Detect platform from executable extension
     #TODO: use same way as py_binary rule to determine if it's Windows or not, since some platforms may have different executable extensions
     is_windows = executable.extension == "exe"
-    
+
     if is_windows:
         wrapper = ctx.actions.declare_file(ctx.label.name + ".bat")
         binary_path_win = binary_short_path.replace("/", "\\")
@@ -39,19 +39,19 @@ set RUNFILES=%~dp0%~n0.bat.runfiles
         wrapper_content = """#!/bin/bash
 # Generated host binary wrapper
 RUNFILES="$(dirname "$0")/$(basename "$0" .sh).sh.runfiles"
-exec "$RUNFILES/{workspace}/{binary_path}" "$@"
+exec "$RUNFILES/{workspace}/{binary_path}" $@
 """.format(workspace = workspace_name, binary_path = binary_short_path)
-    
+
     ctx.actions.write(
         output = wrapper,
         content = wrapper_content,
         is_executable = True,
     )
-    
+
     # Merge runfiles from the original binary
     runfiles = ctx.runfiles(files = [wrapper])
     runfiles = runfiles.merge(binary[DefaultInfo].default_runfiles)
-    
+
     return [DefaultInfo(
         executable = wrapper,
         files = depset([wrapper]),

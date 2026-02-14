@@ -1,10 +1,10 @@
-load("@rules_python//python:defs.bzl", "py_library", "py_binary")
+load("@rules_python//python:defs.bzl", "py_binary", "py_library")
 load(":exec_binary.bzl", "exec_binary")
 
 package(default_visibility = ["//visibility:public"])
 
 py_library(
-    name = "runner_lib",
+    name = "lib",
     srcs = glob(["src/runner/*.py"]),
     imports = ["src"],
     deps = [
@@ -18,16 +18,17 @@ py_library(
 )
 
 py_binary(
-    name = "runner",
-    deps = [":runner_lib"],
+    name = "bin",
     srcs = ["src/main.py"],
     main = "src/main.py",
+    tags = ["manual"],
+    deps = [":lib"],
 )
 
 # Wrapper that forces runner to be built for exec platform
-# It fixes usage of runner on Windows when it's used as a tool under --run_under (e.g. for WASM tests),
-#   because otherwise it would be built for target platform (without .exe) and fail to run python launcher script.
+# It fixes usage of runner on Windows when it's used as a tool (--run_under for WASM tests),
+#   because otherwise it would be built for target platform (without .exe) and fails to run.
 exec_binary(
-    name = "host",
-    binary = ":runner",
+    name = "runner",
+    binary = ":bin",
 )

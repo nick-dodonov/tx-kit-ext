@@ -4,20 +4,21 @@ def _exec_binary_impl(ctx):
     # Get the tool built for exec configuration
     binary_info = ctx.attr.binary[DefaultInfo]
     binary_exe = binary_info.files_to_run.executable
-    
+
     # On Windows, py_binary creates both launcher.exe and the launcher script file.
     # The launcher.exe expects the script to be in the same directory.
-    # Create symlinks for all generated files, preserving their basenames.
+    # Create symlinks in an isolated subdirectory (named after this rule) to avoid
+    # collisions with source outputs, while preserving basenames for file discovery.
     symlinks = []
     originals = []
     executable_symlink = None
-    
+
     for src_file in binary_info.files.to_list():
         # Skip source files - only symlink generated outputs
         if src_file.is_source:
             continue
 
-        # Preserve original basename so files can find each other
+        # Preserve original basename so files can find each other within isolated output directory
         symlink = ctx.actions.declare_file(src_file.basename)
 
         #print("Creating symlink for tool output: {} -> {}".format(symlink, src_file))
@@ -27,11 +28,11 @@ def _exec_binary_impl(ctx):
         )
         symlinks.append(symlink)
         originals.append(src_file)
-        
+
         # Track which symlink corresponds to the primary executable
         if src_file == binary_exe:
             executable_symlink = symlink
-    
+
     #print("Executable symlink for tool output: {}".format(executable_symlink))
     if not executable_symlink:
         fail("Executable not found in tool outputs")

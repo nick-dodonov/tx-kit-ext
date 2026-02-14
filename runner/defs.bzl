@@ -39,7 +39,7 @@ if __name__ == "__main__":
         is_executable = True,
     )
     runfiles = ctx.runfiles(files = [
-        target_binary
+        target_binary,
     ])
 
     return [DefaultInfo(
@@ -47,13 +47,11 @@ if __name__ == "__main__":
         runfiles = runfiles,
     )]
 
-
 run_wrapper_script = rule(
     implementation = _run_wrapper_script_impl,
     attrs = _SHARED_ATTRS,
     executable = True,
 )
-
 
 # https://bazel.build/extending/macros
 def _run_wrapper_impl(name, visibility, target_binary, target_args, tags, is_test):
@@ -70,7 +68,7 @@ def _run_wrapper_impl(name, visibility, target_binary, target_args, tags, is_tes
             name = name,
             srcs = [":{}".format(wrapper_script_name)],
             main = ":{}".format(wrapper_script_name),
-            deps = [Label("//runner:runner_lib")],
+            deps = [Label("//runner:lib")],
             tags = tags,
             visibility = visibility,
         )
@@ -79,7 +77,7 @@ def _run_wrapper_impl(name, visibility, target_binary, target_args, tags, is_tes
             name = name,
             srcs = [":{}".format(wrapper_script_name)],
             main = ":{}".format(wrapper_script_name),
-            deps = [Label("//runner:runner_lib")],
+            deps = [Label("//runner:lib")],
             tags = tags,
             visibility = visibility,
             testonly = True,
