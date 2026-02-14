@@ -1,7 +1,7 @@
 """Build definitions for tx_test rule (cc_test wrapper w/ default build settings for multi-platform runs)."""
 
 load("@rules_cc//cc:cc_test.bzl", "cc_test")
-load("//runner:defs.bzl", "run_wrapper")
+load(":run_wrapper.bzl", "run_wrapper")
 load(":tx_common.bzl", "tx_cc")
 
 def tx_test(name, **kwargs):

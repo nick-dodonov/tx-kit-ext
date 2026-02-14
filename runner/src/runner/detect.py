@@ -56,9 +56,10 @@ def _detect_platform(file: Path) -> Platform:
         return Platform.WASM
 
     for ext in _wasm_exts:
+        
         if real_file.with_suffix(ext).exists():
             info(
-                f"  {Style.DIM}Found WASM extension in realpath+ext: {ext}{Style.RESET_ALL}"
+                f"  {Style.DIM}Found WASM extension in realpath+ext: {file.stem}{ext}{Style.RESET_ALL}"
             )
             return Platform.WASM
 

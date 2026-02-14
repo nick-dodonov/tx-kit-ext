@@ -1,7 +1,7 @@
 """Build definitions for tx_binary rule (cc_binary wrapper w/ default build settings for multi-platform runs)."""
 
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
-load("//runner:defs.bzl", "run_wrapper")
+load(":run_wrapper.bzl", "run_wrapper")
 load(":tx_common.bzl", "tx_cc")
 
 #TODO: try rewrite using Symbolic Macro https://bazel.build/versions/9.0.0/extending/macros
