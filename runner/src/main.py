@@ -2,6 +2,7 @@
 import os
 import sys
 import argparse
+from pathlib import Path
 
 import runner
 from runner.log import *
@@ -40,7 +41,7 @@ def _parse_args() -> runner.Options:
 
     return runner.Options(
         platform=runner.Platform(parsed_args.platform),
-        file=parsed_args.file,
+        file=Path(parsed_args.file),
         args=remain_args,
     )
 

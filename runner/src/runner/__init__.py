@@ -3,6 +3,7 @@ import re
 import sys
 
 from dataclasses import dataclass, field
+from pathlib import Path
 from python.runfiles import Runfiles
 
 from .log import *
@@ -14,7 +15,7 @@ from . import cmd, detect, wasm
 class Options:
     """Start options."""
 
-    file: str
+    file: Path
     args: list[str] = field(default_factory=list)
     platform: Platform = Platform.AUTO
 
@@ -37,27 +38,29 @@ def _log_process_header() -> None:
             info(f"  {Style.DIM}{key}={value}{Style.RESET_ALL}")
 
 
-def _find_file(file: str) -> tuple[str | None, str]:
-    if os.path.exists(file):
+def _find_file(file: Path) -> tuple[Path | None, str]:
+    if file.exists():
         return file, "CWD"
 
     build_working_dir = os.environ.get("BUILD_WORKING_DIRECTORY")
     if build_working_dir:
-        candidate = os.path.join(build_working_dir, file)
-        if os.path.exists(candidate):
+        candidate = Path(build_working_dir) / file
+        if candidate.exists():
             return candidate, "BUILD_WORKING_DIRECTORY"
 
     # Try runfiles
     runfiles = Runfiles.Create()
     if runfiles:
-        rlocation = runfiles.Rlocation(file)
-        if rlocation and os.path.exists(rlocation):
-            return rlocation, "<RUNFILES>"
+        rlocation = runfiles.Rlocation(str(file))
+        if rlocation:
+            rlocation_path = Path(rlocation)
+            if rlocation_path.exists():
+                return rlocation_path, "<RUNFILES>"
 
     return None, "<NOT FOUND>"
 
 
-def _find_file_logged(file: str) -> str | None:
+def _find_file_logged(file: Path) -> Path | None:
     found_file, found_in = _find_file(file)
     if found_file:
         info(f"  {Style.DIM}File found: {found_file} ({found_in}){Style.RESET_ALL}")
@@ -75,9 +78,8 @@ def _main(options: Options) -> int:
     platform = options.platform
     if platform == Platform.AUTO:
         platform = detect.detect_platform(file)
-        info(f"{Style.BRIGHT}Detected: {platform}{Style.RESET_ALL}")
 
-    cmd_with_args = [file] + options.args
+    cmd_with_args = [str(file)] + options.args
     if platform == Platform.WASM:
         command = wasm.make_wrapper_command(cmd_with_args)
     else:
