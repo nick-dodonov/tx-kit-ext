@@ -1,7 +1,5 @@
 load("@rules_python//python:defs.bzl", "py_binary", "py_library")
-load(":exec_binary.bzl", "exec_binary")
-
-package(default_visibility = ["//visibility:public"])
+load("//rules/build:exec_binary.bzl", "exec_binary")
 
 py_library(
     name = "lib",
@@ -15,6 +13,7 @@ py_library(
         # https://github.com/h2non/filetype.py
         "@pypi//filetype",
     ],
+    visibility = ["//visibility:public"],
 )
 
 py_binary(
@@ -23,6 +22,7 @@ py_binary(
     main = "src/main.py",
     tags = ["manual"],
     deps = [":lib"],
+    visibility = ["//visibility:private"],
 )
 
 # Wrapper that forces runner to be built for exec platform
@@ -31,4 +31,5 @@ py_binary(
 exec_binary(
     name = "runner",
     binary = ":bin",
+    visibility = ["//visibility:public"],
 )
