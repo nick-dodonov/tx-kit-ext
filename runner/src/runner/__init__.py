@@ -94,4 +94,6 @@ def start(options: Options) -> None:
         sys.exit(exit_code)
     except Exception as e:
         info(f"{Fore.RED}❌ {e}{Style.RESET_ALL}")
-        sys.exit(1)
+        if isinstance(e, FileNotFoundError):
+            sys.exit(1)
+        raise

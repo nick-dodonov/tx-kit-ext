@@ -22,11 +22,11 @@ def _run_wrapper_script_impl(ctx):
         output = wrapper_script,
         content = """#!/usr/bin/env python3
 import sys
+import pathlib
 import runner
 
-target_binary = "{target_binary}"
 options = runner.Options(
-    file=target_binary,
+    file=pathlib.Path("{target_binary}"),
     args={target_args} + sys.argv[1:],
 )
 
