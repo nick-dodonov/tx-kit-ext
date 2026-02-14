@@ -36,7 +36,7 @@ def log_header_once() -> None:
     if not _logged_header:
         _logged_header = True
         #TODO: also add stamp info
-        info(f"{Fore.CYAN}{Style.BRIGHT}⭐ Runner {Style.DIM}(Python: {sys.version.split()[0]}){Style.RESET_ALL}")
+        info(f"{Fore.CYAN}{Style.BRIGHT}⭐ Runner {Style.DIM}(Python {sys.version.split()[0]}, PID {os.getpid()}){Style.RESET_ALL}")
 
 
 def _log_process_info() -> None:
