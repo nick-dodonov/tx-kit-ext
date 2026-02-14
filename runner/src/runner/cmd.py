@@ -11,14 +11,18 @@ class Command:
     cwd: str | None = None
     cwd_descr: str | None = None
 
+    @staticmethod
+    def _log_delimiter(symbol: str, color: str, length: int = 64) -> None:
+        info(f"{color}{symbol * length}{Style.RESET_ALL}")
+
     def scoped_execute(self, scope_prefix: str) -> int:
         cwd = self.cwd or os.getcwd()
         cmd_str = shlex.join(self.cmd)
         info(f"{Fore.CYAN}➡️  {scope_prefix}{Style.RESET_ALL}") # ⬇️
         cwd_descr = self.cwd_descr if self.cwd_descr else "CWD" if not self.cwd else None
-        info(f"{Style.DIM}  {f'({cwd_descr}) ' if cwd_descr else ''}cd {cwd}{Style.RESET_ALL}")
-        info(f"{Style.DIM}  {cmd_str}{Style.RESET_ALL}")
-        info(f"{Fore.LIGHTBLUE_EX}{'>' * 64}{Style.RESET_ALL}")
+        info(f"  {Style.DIM}{f'({cwd_descr}) ' if cwd_descr else ''}cd {cwd}{Style.RESET_ALL}")
+        info(f"  {Style.DIM}{cmd_str}{Style.RESET_ALL}")
+        self._log_delimiter('>', Fore.LIGHTBLUE_EX)
 
         try:
             result = subprocess.run(self.cmd, cwd=self.cwd, check=False)
@@ -34,7 +38,7 @@ class Command:
             info(f"{Fore.RED}❌ Execute error: {e}{Style.RESET_ALL}")
             exit_code = 1
 
-        info(f"{Fore.LIGHTBLUE_EX}{'<' * 64}{Style.RESET_ALL}")
+        self._log_delimiter('<', Fore.LIGHTBLUE_EX)
         finish_prefix = f"{Fore.CYAN}⬅️  {scope_prefix}{Style.RESET_ALL}" # ⬆️ 🏁
         if exit_code == 0:
             info(f"{finish_prefix} {Fore.GREEN}✅ Success: {exit_code}{Style.RESET_ALL}")

@@ -60,7 +60,7 @@ def _find_file(file: str) -> tuple[str | None, str]:
 def _find_file_logged(file: str) -> str | None:
     found_file, found_in = _find_file(file)
     if found_file:
-        info(f"  {Style.DIM}File in {found_in}:{Style.RESET_ALL} {found_file}{Style.RESET_ALL}")
+        info(f"  {Style.DIM}File found: {found_file} ({found_in}){Style.RESET_ALL}")
     return found_file
 
 
