@@ -1,14 +1,13 @@
 """Rule to build a tool for the execution platform."""
 
 def _exec_binary_impl(ctx):
+    # DEBUG: print providers binary can give
+    # print("DEBUG: binary:", ctx.attr.binary)
+
     # Get the tool built for exec configuration
     binary_info = ctx.attr.binary[DefaultInfo]
     binary_exe = binary_info.files_to_run.executable
     
-    # Debug: check what runfiles binary has
-    print("DEBUG: binary:", ctx.attr.binary)
-    # print("DEBUG: binary data_runfiles:", binary_info.data_runfiles)
-
     # Get binary basename without extension for name matching
     binary_basename = binary_exe.basename
     if binary_exe.extension:
@@ -84,7 +83,7 @@ def _exec_binary_impl(ctx):
         data_runfiles = ctx.attr.data[DefaultInfo].default_runfiles
         runfiles = runfiles.merge(ctx.runfiles(files = data_files))
         runfiles = runfiles.merge(data_runfiles)
-
+    
     return [
         DefaultInfo(
             executable = executable_symlink,
