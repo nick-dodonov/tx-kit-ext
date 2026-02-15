@@ -4,6 +4,10 @@ def _exec_binary_impl(ctx):
     # Get the tool built for exec configuration
     binary_info = ctx.attr.binary[DefaultInfo]
     binary_exe = binary_info.files_to_run.executable
+    
+    # Debug: check what runfiles binary has
+    print("DEBUG: binary:", ctx.attr.binary)
+    # print("DEBUG: binary data_runfiles:", binary_info.data_runfiles)
 
     # Get binary basename without extension for name matching
     binary_basename = binary_exe.basename
@@ -72,6 +76,14 @@ def _exec_binary_impl(ctx):
     #runfiles = ctx.runfiles(files = originals)
     #runfiles = runfiles.merge(binary_info.default_runfiles)
     runfiles = binary_info.default_runfiles
+    
+    # Add data dependency (built in target configuration) to runfiles
+    # Include both files and their runfiles so target binary can run
+    if ctx.attr.data:
+        data_files = ctx.attr.data[DefaultInfo].files.to_list()
+        data_runfiles = ctx.attr.data[DefaultInfo].default_runfiles
+        runfiles = runfiles.merge(ctx.runfiles(files = data_files))
+        runfiles = runfiles.merge(data_runfiles)
 
     return [
         DefaultInfo(
@@ -89,6 +101,11 @@ exec_binary = rule(
             mandatory = True,
             cfg = "exec",
         ),
+        "data": attr.label(
+            allow_single_file = True,
+            cfg = "target",
+            doc = "Additional data dependency (built in target configuration)",
+        ),
     },
     executable = True,
 )
@@ -100,6 +117,11 @@ exec_test = rule(
             executable = True,
             mandatory = True,
             cfg = "exec",
+        ),
+        "data": attr.label(
+            allow_single_file = True,
+            cfg = "target",
+            doc = "Additional data dependency (built in target configuration)",
         ),
     },
     test = True,
