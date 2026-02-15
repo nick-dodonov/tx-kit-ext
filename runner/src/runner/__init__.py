@@ -96,10 +96,15 @@ def _main(options: Options) -> int:
     cmd_with_args = [str(file)] + options.args
     if platform == Platform.WASM:
         command = wasm.make_wrapper_command(cmd_with_args)
-    else:
+    elif platform == Platform.EXEC:
         command = cmd.Command(cmd=cmd_with_args)
+    elif platform == Platform.PYTHON:
+        command = cmd.Command(cmd=["python3"] + cmd_with_args)
+    else:
+        raise ValueError(f"Unsupported platform: {platform}")
 
-    return command.scoped_execute(f"[{platform.value.upper()}]")
+    descr = Path(command.cmd[0]).name
+    return command.scoped_execute(f"[{platform.value.upper()}: {descr}]")
 
 
 def start(options: Options) -> None:

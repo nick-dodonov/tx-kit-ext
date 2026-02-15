@@ -25,10 +25,18 @@ class Command:
         self._log_delimiter('>', Fore.LIGHTBLUE_EX)
 
         try:
-            result = subprocess.run(self.cmd, cwd=self.cwd, check=False)
+            env = os.environ.copy()
+            # def clean_env_var(env, var_name: str):
+            #     if var_name in env:
+            #         del env[var_name]
+            # clean_env_var(env, "PYTHONPATH")
+            # clean_env_var(env, "RUNFILES_DIR")
+            # clean_env_var(env, "RUNFILES_MANIFEST_FILE")
+
+            result = subprocess.run(self.cmd, cwd=self.cwd, check=False, env=env)
             exit_code = result.returncode
         except FileNotFoundError as e:
-            info(f"{Fore.RED}❌ Execute command not found: {self.cmd[0]}{Style.RESET_ALL}")
+            info(f"{Fore.RED}❌ Execute not found: {e}{Style.RESET_ALL}")
             info(f"Error: {e}")
             exit_code = 127
         except KeyboardInterrupt:

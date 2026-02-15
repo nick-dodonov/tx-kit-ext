@@ -44,6 +44,8 @@ def _detect_platform(file: Path) -> Platform:
     shebang = _read_shebang(real_file)
     if shebang:
         info(f"  {Style.DIM}Shebang: {shebang}{Style.RESET_ALL}")
+        if "python" in shebang:
+            return Platform.PYTHON
 
     if kind:
         if kind.extension == "tar":
@@ -63,10 +65,11 @@ def _detect_platform(file: Path) -> Platform:
             )
             return Platform.WASM
 
-    return Platform.AUTO
+    return Platform.EXEC
 
 
 def detect_platform(file: Path) -> Platform:
     platform = _detect_platform(file)
     info(f"  {Style.DIM}Detected: {platform}{Style.RESET_ALL}")
+    assert platform != Platform.AUTO, "Detection should never return AUTO"
     return platform
