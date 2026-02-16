@@ -4,7 +4,14 @@ import sys
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from python.runfiles import Runfiles
+
+# https://pypi.org/project/bazel-runfiles/#description
+try:
+    # for deps = ["@rules_python//python/runfiles"]
+    from python.runfiles import Runfiles # pyright: ignore[reportMissingImports]
+except ImportError: 
+    # for deps = [requirement("bazel-runfiles")]
+    from runfiles import Runfiles
 
 from .log import *
 from .platform import Platform

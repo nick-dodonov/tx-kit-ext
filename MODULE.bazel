@@ -42,9 +42,8 @@ use_repo(python, "python_3_11", "python_3_11_host")
 
 pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
 pip.parse(
-    #TODO: support requirements_lock generation by pyproject.toml
     hub_name = "pypi",
     python_version = "3.11",
-    requirements_lock = "//tools:requirements.txt",
+    requirements_lock = "//:requirements_lock.txt", # created by compile_pip_requirements rule in BUILD.bazel
 )
 use_repo(pip, "pypi")

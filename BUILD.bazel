@@ -1,0 +1,9 @@
+load("@rules_python//python:pip.bzl", "compile_pip_requirements")
+
+# `bazel run //:requirements.update` to update requirements_lock.txt based on pyproject.toml
+# `bazel test //:requirements.test` to test
+compile_pip_requirements(
+    name = "requirements",
+    src = "pyproject.toml",
+    requirements_txt = "requirements_lock.txt",
+)

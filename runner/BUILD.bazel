@@ -1,4 +1,5 @@
 load("@rules_python//python:defs.bzl", "py_binary", "py_library")
+load("@pypi//:requirements.bzl", "requirement")
 load("//rules/build:exec_binary.bzl", "exec_binary")
 
 py_library(
@@ -7,11 +8,9 @@ py_library(
     imports = ["src"],
     deps = [
         # https://github.com/bazel-contrib/rules_python/tree/main/python/runfiles
-        "@rules_python//python/runfiles",
-        # https://github.com/tartley/colorama
-        "@pypi//colorama",
-        # https://github.com/h2non/filetype.py
-        "@pypi//filetype",
+        requirement("bazel-runfiles"),  # also "@rules_python//python/runfiles" can be used (but need import python.runfiles instead of import runfiles)
+        requirement("colorama"),  # also "@pypi//colorama" can be used
+        requirement("filetype"),
     ],
     visibility = ["//visibility:public"],
 )

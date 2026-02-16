@@ -1,0 +1,23 @@
+[project]
+name = "tx-kit-ext-tools"
+version = "0.1.0"
+description = "Development tools for TX workspace"
+requires-python = ">=3.11"
+
+# `bazel run //:requirements.update` to update requirements_lock.txt based on pyproject.toml
+dependencies = [
+    # https://github.com/bazel-contrib/rules_python/tree/main/python/runfiles
+    # https://pypi.org/project/bazel-runfiles/#description
+    "bazel-runfiles==1.8.4",
+
+    # https://github.com/tartley/colorama
+    "colorama==0.4.6",
+    # https://github.com/h2non/filetype.py
+    "filetype==1.2.0",
+    # https://github.com/termcolor/termcolor
+    "termcolor==3.3.0",
+]
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
