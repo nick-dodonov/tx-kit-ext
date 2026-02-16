@@ -33,7 +33,7 @@ class Command:
             # clean_env_var(env, "RUNFILES_DIR")
             # clean_env_var(env, "RUNFILES_MANIFEST_FILE")
 
-            result = subprocess.run(self.cmd, cwd=self.cwd, check=False, env=env)
+            result = subprocess.run(self.cmd, cwd=self.cwd, check=False, env=env, shell=True)
             exit_code = result.returncode
         except FileNotFoundError as e:
             info(f"{Fore.RED}❌ Execute not found: {e}{Style.RESET_ALL}")
