@@ -109,10 +109,17 @@ for %%a in (%*) do (
     echo   [!index!] %%a
     set /a index+=1
 )
-echo   BUILD_WORKING_DIRECTORY=%BUILD_WORKING_DIRECTORY%
-echo   BUILD_WORKSPACE_DIRECTORY=%BUILD_WORKSPACE_DIRECTORY%
-echo   RUNFILES_DIR=%RUNFILES_DIR%
-echo   RUNFILES_MANIFEST_FILE=%RUNFILES_MANIFEST_FILE%
+REM Print environment variables if set
+for %%v in (
+    BUILD_WORKING_DIRECTORY^
+    BUILD_WORKSPACE_DIRECTORY^
+    RUNFILES_DIR^
+    RUNFILES_MANIFEST_FILE
+) do (
+    if defined %%v (
+        call echo   %%v=%%!%%v!%%
+    )
+)
 
 REM Try to load arguments from .args file (prepend to provided args)
 set "ARGS_FILE=%~dpn0.args"
