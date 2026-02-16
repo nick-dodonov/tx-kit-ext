@@ -1,2 +1,5 @@
+# allow to use .lldbinit in repository
 settings set target.load-cwd-lldbinit true
+
+# startup logging to diagnose
 script import datetime; print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] === Load ~/.lldbinit, debugger version:\n{lldb.debugger.GetVersionString()}")
