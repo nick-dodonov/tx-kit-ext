@@ -1,10 +1,13 @@
-"""Bazel aspect for inspecting target information."""
+"""Bazel aspect for inspecting target information.
+
+Usage:
+    bazel build //path/to:target --aspects=@tx-kit-ext//aspects:inspect.bzl%inspect_aspect
+"""
 
 def _log(message):
     _YELLOW = "\033[1;33m"
     _RESET = "\033[0m"
     print("\n" + _YELLOW + message + _RESET)  # buildifier: disable=print
-
 
 def _inspect_aspect_impl(target, ctx):
     _log("""target: {}
