@@ -7,17 +7,10 @@ Supports both test mode (bazel test) and run mode (bazel run).
 
 import argparse
 import os
-import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 import runner.cmd
-
-
-def _log(*args: Any, **kwargs: Any) -> None:
-    """Print function with automatic flush."""
-    print(*args, **kwargs)
-    sys.stdout.flush()
+from runner.log import info, Fore, Style
 
 
 @dataclass
@@ -39,15 +32,6 @@ class Options:
     args: list[str]
 
 
-class Colors:
-    """ANSI color codes for terminal output."""
-    GREEN = "\033[32m"
-    RED = "\033[31m"
-    YELLOW = "\033[35m" # now magneta real yellow:"\033[1;33m"
-    LIGHT_BLUE = "\033[1;34m"
-    RESET = "\033[0m"
-
-
 class WasmRunner:
     """Main WASM runner class."""
     
@@ -65,11 +49,11 @@ class WasmRunner:
         # Check if the base file (without extension) is a tar archive
         tar_path = base_path
         if tarfile.is_tarfile(tar_path):
-            _log(f"Found tar archive: {tar_path}")
+            info(f"Found tar archive: {tar_path}")
             
             # Create temporary directory for extraction
             temp_dir = Path(tempfile.mkdtemp(prefix="wasm_runner_"))
-            _log(f"Extracting to temporary directory: {temp_dir}")
+            info(f"Extracting to temporary directory: {temp_dir}")
             
             try:
                 with tarfile.open(tar_path, 'r') as tar:
@@ -84,14 +68,14 @@ class WasmRunner:
                 extracted_html = temp_dir / html_name
                 
                 if extracted_html.exists():
-                    _log(f"Successfully extracted HTML file: {extracted_html}")
+                    info(f"Successfully extracted HTML file: {extracted_html}")
                     return extracted_html
                 else:
-                    _log(f"HTML file not found in extracted archive: {html_name}")
+                    info(f"HTML file not found in extracted archive: {html_name}")
                     return None
                     
             except Exception as e:
-                _log(f"Error extracting tar archive: {e}")
+                info(f"Error extracting tar archive: {e}")
                 return None
         
         return None
@@ -102,7 +86,7 @@ class WasmRunner:
         
         # Strategy 1: Direct file access (common for bazel run)
         if html_file.exists():
-            _log(f"  Found HTML file directly: {html_file}")
+            info(f"  Found HTML file directly: {html_file}")
             return html_file
         
         # Strategy 2: Try in build working directory (bazel run with BUILD_WORKING_DIRECTORY)
@@ -110,13 +94,13 @@ class WasmRunner:
             # Try relative to build working directory
             build_html = Path(self.build_working_dir) / html_file
             if build_html.exists():
-                _log(f"  Found HTML file in build working directory: {build_html}")
+                info(f"  Found HTML file in build working directory: {build_html}")
                 return build_html
             
             # Try in bazel-bin directory
             bazel_bin_html = Path(self.build_working_dir) / "bazel-bin" / html_file
             if bazel_bin_html.exists():
-                _log(f"  Found HTML file in bazel-bin: {bazel_bin_html}")
+                info(f"  Found HTML file in bazel-bin: {bazel_bin_html}")
                 return bazel_bin_html
             
             # Try extracting from tar in bazel-bin
@@ -136,7 +120,7 @@ class WasmRunner:
             
             for runfiles_html in possible_direct_paths:
                 if runfiles_html.exists():
-                    _log(f"Found HTML file using RUNFILES_DIR: {runfiles_html}")
+                    info(f"Found HTML file using RUNFILES_DIR: {runfiles_html}")
                     return runfiles_html
             
             # Try extracting from tar in runfiles
@@ -171,28 +155,28 @@ class WasmRunner:
     
     def make_cmd_with_node(self, html_file: Path, args: list[str]) -> list[str]:
         """Run WASM using Node.js (test mode)."""
-        _log(f"{Colors.YELLOW}🚀 WASM Test mode (via node):{Colors.RESET}")
-        _log(f"  cwd: {os.getcwd()}")
-        _log(f"  html: {html_file}")
+        info(f"{Fore.MAGENTA}🚀 WASM Test mode (via node):{Style.RESET_ALL}")
+        info(f"  cwd: {os.getcwd()}")
+        info(f"  html: {html_file}")
         
         js_file = html_file.with_suffix('.js')
         if not js_file.exists():
             raise FileNotFoundError(f"JavaScript file not found: {js_file}")
         
-        _log(f"  js: {js_file}")
+        info(f"  js: {js_file}")
         if args:
-            _log(f"  args: {' '.join(args)}")
+            info(f"  args: {' '.join(args)}")
         
         cmd = ['node', str(js_file)] + args
         return cmd
 
     def make_cmd_with_emrun(self, html_file: Path, args: list[str], emrun: EmrunOptions) -> list[str]:
         """Run WASM using emrun (run mode)."""
-        _log(f"{Colors.YELLOW}🚀 WASM Run mode (via emrun):{Colors.RESET}")
-        _log(f"  cwd: {os.getcwd()}")
-        _log(f"  html: {html_file}")
+        info(f"{Fore.MAGENTA}🚀 WASM Run mode (via emrun):{Style.RESET_ALL}")
+        info(f"  cwd: {os.getcwd()}")
+        info(f"  html: {html_file}")
         if args:
-            _log(f"  args: {' '.join(args)}")
+            info(f"  args: {' '.join(args)}")
         
         # https://emscripten.org/docs/compiling/Running-html-files-with-emrun.html#controlling-log-output
         cmd = [
@@ -234,7 +218,7 @@ class WasmRunner:
 
     def make_command(self, options: Options) -> runner.cmd.Command:
         """Print the runner header with environment information."""
-        _log(f"{Colors.YELLOW}🚀 WASM Runner:{Colors.RESET}")
+        info(f"{Fore.MAGENTA}🚀 WASM Runner:{Style.RESET_ALL}")
 
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         # TODO: replace with external runfiles support !!
@@ -295,7 +279,7 @@ def _parse_env_file(env_file: Path) -> list[str]:
     try:
         with open(env_file, 'r') as f:
             content = f.read()
-            _log(f"  content: {content.strip()}")
+            info(f"  content: {content.strip()}")
             
             # Parse WASM_RUNNER_ARGS variable
             args = []
@@ -319,14 +303,14 @@ def _parse_env_file(env_file: Path) -> list[str]:
                     args.extend(shlex.split(value))
             
             if args:
-                _log(f"  parsed args: {args}")
+                info(f"  parsed args: {args}")
             else:
-                _log(f"  no WASM_RUNNER_ARGS variable found")
+                info(f"  no WASM_RUNNER_ARGS variable found")
             
             return args
             
     except Exception as e:
-        _log(f"  {Colors.RED}❌ Error reading file: {e}{Colors.RESET}")
+        info(f"  {Fore.RED}❌ Error reading file: {e}{Style.RESET_ALL}")
         return []
 
 
@@ -339,7 +323,7 @@ def read_env_file(file_path: str) -> list[str]:
     Returns:
         List of arguments parsed from .env file, or empty list if not found
     """
-    _log(f"{Colors.YELLOW}📄 WASM Looking for .env:{Colors.RESET}")
+    info(f"{Fore.MAGENTA}📄 WASM Looking for .env:{Style.RESET_ALL}")
     
     # Strategy 1: If we're in runfiles directory (bazel run), look for .env relative to runfiles root
     runfiles_root = _get_runfiles_root()
@@ -355,20 +339,20 @@ def read_env_file(file_path: str) -> list[str]:
             rel_dir = str(Path(rel_path).parent)
             
             env_file = runfiles_root / rel_dir / ".env"
-            _log(f"  .env runfiles path: {env_file}")
+            info(f"  .env runfiles path: {env_file}")
             
             if env_file.exists():
-                _log(f"  {Colors.GREEN}.env found in runfiles{Colors.RESET}")
+                info(f"  {Fore.GREEN}.env found in runfiles{Style.RESET_ALL}")
                 return _parse_env_file(env_file)
 
     # Strategy 2: Look for .env in the same directory as the target file (direct execution)
     target_dir = Path(file_path).parent
     env_file = target_dir / ".env"
     if env_file.exists():
-        _log(f"  {Colors.GREEN}.env found in direct path: {Colors.RESET} {env_file}")
+        info(f"  {Fore.GREEN}.env found in direct path: {Style.RESET_ALL} {env_file}")
         return _parse_env_file(env_file)
 
-    _log(f"  .env not found")
+    info(f"  .env not found")
     return []
 
 
@@ -428,22 +412,21 @@ Examples:
 
     # Use parse_known_intermixed_args() instead of parse_args() allowing to use --emrun after positional (file) args
     #   and also to ignore unknown args (passed to the WASM program)
-    _log(f"{Colors.YELLOW}⚙️  WASM Parsing:{Colors.RESET} {args}")
     parsed_args, unknown_args = parser.parse_known_intermixed_args(args)
-    _log(f"  parsed: {parsed_args}")
+    info(f"  parsed: {parsed_args}")
     if unknown_args:
-        _log(f"  unknown: {unknown_args}")
+        info(f"  unknown: {unknown_args}")
 
     # Read .env file for WASM_RUNNER_ARGS variable and parse additional args from it
     env_args = read_env_file(parsed_args.file)
     if env_args:
-        _log(f"Merging args from .env file with command line args:")
+        info(f"Merging args from .env file with command line args:")
         # Parse env args with a dummy file argument to satisfy the parser
         # Command line args will override .env args
         env_parsed, env_unknown = parser.parse_known_intermixed_args(['dummy_file'] + env_args)
-        _log(f"  env parsed: {env_parsed}")
+        info(f"  env parsed: {env_parsed}")
         if env_unknown:
-            _log(f"  env unknown: {env_unknown}")
+            info(f"  env unknown: {env_unknown}")
         
         # Merge: command line args override .env args (only if not already set from command line)
         for key, value in vars(env_parsed).items():
@@ -452,9 +435,9 @@ Examples:
         
         # Add env unknown args to the beginning (so they can be overridden by command line unknown args)
         unknown_args = env_unknown + unknown_args
-        _log(f"  merged parsed: {parsed_args}")
+        info(f"  merged parsed: {parsed_args}")
         if unknown_args:
-            _log(f"  merged unknown: {unknown_args}")
+            info(f"  merged unknown: {unknown_args}")
 
 
     # If nokill is enabled, automatically enable emrun and show
@@ -477,7 +460,7 @@ Examples:
         emrun=emrun,
         args=unknown_args
     )
-    _log(f"""{Colors.YELLOW}⚙️  WASM Options:{Colors.RESET}
+    info(f"""{Fore.MAGENTA}⚙️  WASM Options:{Style.RESET_ALL}
   emrun={options.emrun} 
   file={options.file} 
   args={options.args}""")
@@ -486,6 +469,7 @@ Examples:
 
 
 def make_wrapper_command(args: list[str]) -> runner.cmd.Command:
+    info(f"{Fore.MAGENTA}⚙️  WASM Processing:{Style.RESET_ALL} {args}")
     options = parse_arguments(args)
     runner = WasmRunner()
     return runner.make_command(options)
