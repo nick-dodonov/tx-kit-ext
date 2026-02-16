@@ -104,9 +104,11 @@ if exist "!ARGS_FILE!" (
 )
 
 REM Combine file args with provided args
-set "FULL_ARGS=!ARGS_LINE! %*"
-set "FULL_ARGS=!FULL_ARGS:~0,-1!"
-for /f "tokens=* delims= " %%a in ("!FULL_ARGS!") set "FULL_ARGS=%%a"
+if "%*"=="" (
+    set "FULL_ARGS=!ARGS_LINE!"
+) else (
+    set "FULL_ARGS=!ARGS_LINE! %*"
+)
 
 REM Check if we have any arguments after loading
 if "!FULL_ARGS!"=="" (
