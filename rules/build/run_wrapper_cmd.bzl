@@ -28,7 +28,10 @@ def make_run_wrapper_cmd(name, bin_target, is_test=False, **kwargs):
         outs = [runner_args_name],
         # `${paths##* }` in bash is hack selecting the last path from space-separated list of paths,
         #   because py_binary on Windows gives launcher .exe and launcher script.
-        cmd = "paths='$(rootpaths {runner_target})'; echo $${{paths##* }} $(rootpath {bin_target}) > $@"
+        cmd = """
+paths='$(rootpaths {runner_target})'
+echo $${{paths##* }} $(rootpath {bin_target}) > $@
+"""
             .format(
                 runner_target=_runner_target, 
                 bin_target=bin_target
