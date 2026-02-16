@@ -95,6 +95,7 @@ def _main(options: Options) -> int:
 
     cmd_with_args = [str(file)] + options.args
     if platform == Platform.WASM:
+        cmd_with_args[0] = str(file.resolve())
         command = wasm.make_wrapper_command(cmd_with_args)
     elif platform == Platform.EXEC:
         command = cmd.Command(cmd=cmd_with_args)

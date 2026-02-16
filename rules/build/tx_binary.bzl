@@ -12,7 +12,7 @@ def tx_binary(name, **kwargs):
         name: The name of the target.
         **kwargs: Additional keyword arguments passed to cc_binary.
     """
-    bin_name = name
+    bin_name = "{}.bin".format(name)
     cc_binary(
         name = bin_name,
         copts = tx_cc.get_copts(kwargs.pop("copts", [])),
@@ -24,4 +24,11 @@ def tx_binary(name, **kwargs):
     make_run_wrapper_cmd(
         name = name,
         bin_target = ":{}".format(bin_name),
+        tags = ["manual"],
+    )
+
+    native.alias(
+        name = name,
+        actual = ":{}.cmd".format(name),
+        tags = ["manual"],
     )

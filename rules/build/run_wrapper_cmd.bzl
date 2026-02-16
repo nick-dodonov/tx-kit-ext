@@ -1,14 +1,18 @@
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
 # load(":run_wrapper.bzl", "run_wrapper")
 
 _runner_target = Label("//runner:runner")
+_sh_wrapper_target = Label("//runner:sh_wrapper.cmd")
 
-def make_run_wrapper_cmd(name, bin_target):
+def make_run_wrapper_cmd(name, bin_target, is_test=False, **kwargs):
     """Creates a shell wrapper command for running a binary target via the runner target.
     
     Args:
         name: The name of the binary target to wrap.
         bin_target: The label of the binary target to be executed by the runner.
+        is_test: Whether this wrapper must be a test target. Defaults to False.
+        **kwargs: Additional keyword arguments passed to sh_binary or sh_test.
     """
 
     # run_wrapper(
@@ -38,22 +42,36 @@ def make_run_wrapper_cmd(name, bin_target):
                 runner_target=_runner_target, 
                 bin_target=bin_target
             ),
+        testonly = kwargs.get("testonly", False),
         tags = ["manual"],  # only when requested in dependant rules (to avoid spam)
+        #TODO: private
     )
 
     runner_cmd_name = "{}.cmd".format(name)
-    sh_binary(
-        name = runner_cmd_name,
-        srcs = ["@tx-kit-ext//runner:sh_wrapper.cmd"],
-        data = [
-            runner_args_name,
-            _runner_target,
-            bin_target,
-        ],
-        # exec_compatible_with = [
-        #     "@platforms//os:windows",
-        #     "@platforms//os:macos",
-        #     "@platforms//os:linux",
-        # ],
-        tags = ["manual"],  # only when requested in dependant rules (to avoid spam)
-    )
+    if not is_test:
+        sh_binary(
+            name = runner_cmd_name,
+            srcs = [_sh_wrapper_target],
+            data = [
+                runner_args_name,
+                _runner_target,
+                bin_target,
+            ],
+            # exec_compatible_with = [
+            #     "@platforms//os:windows",
+            #     "@platforms//os:macos",
+            #     "@platforms//os:linux",
+            # ],
+            **kwargs,
+        )
+    else:
+        sh_test(
+            name = runner_cmd_name,
+            srcs = [_sh_wrapper_target],
+            data = [
+                runner_args_name,
+                _runner_target,
+                bin_target,
+            ],
+            **kwargs,
+        )

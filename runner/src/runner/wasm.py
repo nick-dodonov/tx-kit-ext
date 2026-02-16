@@ -63,8 +63,8 @@ class WasmRunner:
         import tempfile
         
         # Check if the base file (without extension) is a tar archive
-        tar_path = base_path.with_suffix('')
-        if tar_path.exists() and tarfile.is_tarfile(tar_path):
+        tar_path = base_path
+        if tarfile.is_tarfile(tar_path):
             _log(f"Found tar archive: {tar_path}")
             
             # Create temporary directory for extraction
@@ -98,7 +98,7 @@ class WasmRunner:
 
     def find_html_file(self, file_path: str) -> Path:
         """Find the HTML file, handling different execution contexts."""
-        html_file = Path(file_path).with_suffix('.html')
+        html_file = Path(file_path + '.html')
         
         # Strategy 1: Direct file access (common for bazel run)
         if html_file.exists():
