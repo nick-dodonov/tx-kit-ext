@@ -2,29 +2,11 @@ import os
 import re
 import sys
 
-from dataclasses import dataclass, field
 from pathlib import Path
 
-# https://pypi.org/project/bazel-runfiles/#description
-try:
-    # for deps = ["@rules_python//python/runfiles"]
-    from python.runfiles import Runfiles # pyright: ignore[reportMissingImports]
-except ImportError: 
-    # for deps = [requirement("bazel-runfiles")]
-    from runfiles import Runfiles
-
-from .log import *
-from .platform import Platform
-from . import cmd, detect, wasm
-
-
-@dataclass
-class Options:
-    """Start options."""
-
-    file: Path
-    args: list[str] = field(default_factory=list)
-    platform: Platform = Platform.AUTO
+from . import find, detect, cmd, wasm
+from .log import info, Fore, Style
+from .context import Platform, Options
 
 
 ENV_REGEXP_FILTERS = [
@@ -58,52 +40,29 @@ def _log_process_info() -> None:
 def _log_options(options: Options) -> None:
     info(f"  {Style.DIM}{options}{Style.RESET_ALL}")
 
-def _find_file(file: Path) -> tuple[Path | None, str]:
-    if file.exists():
-        return file, "CWD"
-
-    build_working_dir = os.environ.get("BUILD_WORKING_DIRECTORY")
-    if build_working_dir:
-        candidate = Path(build_working_dir) / file
-        if candidate.exists():
-            return candidate, "BUILD_WORKING_DIRECTORY"
-
-    # Try runfiles
-    runfiles = Runfiles.Create()
-    if runfiles:
-        rlocation = runfiles.Rlocation(str(file))
-        if rlocation:
-            rlocation_path = Path(rlocation)
-            if rlocation_path.exists():
-                return rlocation_path, "<RUNFILES>"
-
-    return None, "<NOT FOUND>"
-
-
-def _find_file_logged(file: Path) -> Path | None:
-    found_file, found_in = _find_file(file)
-    if found_file:
-        info(f"  {Style.DIM}Found: {found_file} # {found_in}{Style.RESET_ALL}")
-    return found_file
-
 
 def _main(options: Options) -> int:
     log_header_once()
     _log_process_info()
     _log_options(options)
 
-    file = _find_file_logged(options.file)
-    if not file:
+    finder = find.Finder()
+    found_file = finder.find_file_logged(options.file)
+    if not found_file:
         raise FileNotFoundError(f"File not found: {options.file}")
 
     platform = options.platform
     if platform == Platform.AUTO:
-        platform = detect.detect_platform(file)
+        platform = options.platform = detect.detect_platform(found_file)
 
-    cmd_with_args = [str(file)] + options.args
+    cmd_with_args = [str(found_file)] + options.args
     if platform == Platform.WASM:
-        cmd_with_args[0] = str(file.resolve())
-        command = wasm.make_wrapper_command(cmd_with_args)
+        ctx = context.Context(
+            options=options, 
+            finder=finder,
+            found_file=found_file,
+        )
+        command = wasm.make_wrapper_command(ctx)
     elif platform == Platform.EXEC:
         command = cmd.Command(cmd=cmd_with_args)
     elif platform == Platform.PYTHON:

@@ -2,8 +2,8 @@ from pathlib import Path
 
 import filetype
 
-from .log import *
-from . import Platform
+from .log import info, Style
+from .context import Platform
 
 _wasm_exts = (".html", ".js", ".wasm")
 

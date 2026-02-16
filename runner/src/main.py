@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-import os
 import sys
 import argparse
 from pathlib import Path
 
 import runner
-from runner.log import *
+from runner.context import Options, Platform
 
 
 def _verbose(*args: object, **kwargs: object) -> None:
@@ -14,7 +13,7 @@ def _verbose(*args: object, **kwargs: object) -> None:
     pass
 
 
-def _parse_args() -> runner.Options:
+def _parse_args() -> Options:
     parser = argparse.ArgumentParser(
         description="Runner - executor of binary file for target platform",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -22,8 +21,8 @@ def _parse_args() -> runner.Options:
     parser.add_argument(
         "--platform",
         "-p",
-        choices=[p.value for p in runner.Platform],
-        default=runner.Platform.AUTO.value,
+        choices=[p.value for p in Platform],
+        default=Platform.AUTO.value,
         help="Target platform to run the binary for (default: auto-detect)",
     )
     parser.add_argument("file", help="Target binary file to execute")
@@ -39,8 +38,8 @@ def _parse_args() -> runner.Options:
     if remain_args:
         _verbose(f"  remain: {remain_args}")
 
-    return runner.Options(
-        platform=runner.Platform(parsed_args.platform),
+    return Options(
+        platform=Platform(parsed_args.platform),
         file=Path(parsed_args.file),
         args=remain_args,
     )
