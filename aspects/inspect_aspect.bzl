@@ -1,7 +1,10 @@
 """Bazel aspect for inspecting target information.
 
 Usage:
-    bazel build //path/to:target --aspects=@tx-kit-ext//aspects:inspect.bzl%inspect_aspect
+    bazel build //path/to:target --aspects=@tx-kit-ext//aspects:inspect_aspect.bzl%inspect_aspect
+
+Documentation:
+    https://bazel.build/versions/8.5.0/extending/aspects
 """
 
 def _log(message):

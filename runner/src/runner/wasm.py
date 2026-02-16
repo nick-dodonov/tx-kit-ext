@@ -194,7 +194,13 @@ class WasmRunner:
         if args:
             _log(f"  args: {' '.join(args)}")
         
-        cmd = ['emrun']
+        # https://emscripten.org/docs/compiling/Running-html-files-with-emrun.html#controlling-log-output
+        cmd = [
+            'emrun',
+            # '--verbose',  # Print detailed information about emrun internal steps.
+            # '--system_info',  # Print detailed information about the current system before launching.
+            # '--browser_info',  # Print information about which browser is about to be launched.
+        ]
         
         # Only add kill arguments if nokill is not enabled
         if not emrun.nokill:
