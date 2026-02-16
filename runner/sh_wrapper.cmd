@@ -1,44 +1,67 @@
 @goto(){
 # Shell script here
 # TODO: via runfiles and fallback: $(dirname "$0")/sh_wrapper.sh
-echo "#### Shell ($(uname -sm) $SHELL)"
-# read -esp "Press Enter to continue..."
 
-# print execution environment
-{
-echo "  PWD $(pwd)"
-echo "  [0] $0"
-index=1
-for arg in "$@"; do
-    echo "  [$index] $arg"
-    index=$((index + 1))
-done
-echo "  BUILD_WORKING_DIRECTORY=$BUILD_WORKING_DIRECTORY"
-echo "  BUILD_WORKSPACE_DIRECTORY=$BUILD_WORKSPACE_DIRECTORY"
-echo "  RUNFILES_DIR=$RUNFILES_DIR"
-echo "  RUNFILES_MANIFEST_FILE=$RUNFILES_MANIFEST_FILE"
-}
-
-# Check if no arguments provided
-if [ $# -eq 0 ]; then
-    ARGS_FILE="${0%.cmd}.args"
-    if [ -f "$ARGS_FILE" ]; then
-        echo "#### Loading arguments from: $ARGS_FILE"
-        # Read arguments from file (portable, works on macOS)
-        read -r ARGS_LINE < "$ARGS_FILE"
-        set -- $ARGS_LINE
-        echo "#### Loaded arguments: $@"
-    else
-        echo "#### ERROR: No arguments provided and args file not found: $ARGS_FILE" >&2
-        exit 1
-    fi
+# Setup terminal colors/formatting if supported
+if [ -t 1 ] && [ -n "$TERM" ] && [ "$TERM" != "dumb" ]; then
+    _DIM=$'\033[2m'
+    _RESET=$'\033[0m'
+else
+    _DIM=""
+    _RESET=""
 fi
 
-echo "#### Execute: $@"
+_basename=$(basename "$0")
+echo "## Shell ($(uname -sm) $SHELL): $_basename"
+# read -esp "Press Enter to continue..."
+
+echo -n "$_DIM"
+# print execution environment
+{
+    echo "  PWD $(pwd)"
+    echo "  [0] $0"
+    index=1
+    for arg in "$@"; do
+        echo "  [$index] $arg"
+        index=$((index + 1))
+    done
+    # print environment variables if set
+    _ENV_VARS=(
+        "BUILD_WORKING_DIRECTORY"
+        "BUILD_WORKSPACE_DIRECTORY"
+        "RUNFILES_DIR"
+        "RUNFILES_MANIFEST_FILE"
+    )
+    for var in "${_ENV_VARS[@]}"; do
+        if [ -n "${!var}" ]; then
+            echo "  $var=${!var}"
+        fi
+    done
+}
+
+# Try to load arguments from .args file (prepend to provided args)
+ARGS_FILE="${0%.cmd}.args"
+if [ -f "$ARGS_FILE" ]; then
+    echo "  ## Loading arguments: $ARGS_FILE"
+    read -r ARGS_LINE < "$ARGS_FILE"
+    echo "  ## Loaded from file: $ARGS_LINE"
+    # Prepend file args before provided args
+    set -- $ARGS_LINE "$@"
+fi
+echo -n "$_RESET"
+
+# Check if we have any arguments after loading
+if [ $# -eq 0 ]; then
+    echo "## ERROR: No arguments provided and args file not found or empty: $ARGS_FILE" >&2
+    echo -n "$_RESET"
+    exit 1
+fi
+
+echo "## Execute: $@"
 # exec "$@"
 "$@"
 _ERR=$?
-echo "#### Errorcode: $_ERR"
+echo "## [$_basename] Errorcode: $_ERR"
 exit $_ERR
 }
 
@@ -48,8 +71,9 @@ exit
 :(){
 :: Batch script here
 @echo off
+set "_basename=%~nx0"
 :: TODO: via runfiles and fallback: call "%~dp0sh_wrapper.bat"
-echo #### Batch (%OS% %PROCESSOR_ARCHITECTURE% %ComSpec%)
+echo ## Batch (%OS% %PROCESSOR_ARCHITECTURE% %ComSpec%): %_basename%
 :: pause # "Press any key to continue..."
 
 REM print execution environment
@@ -66,30 +90,32 @@ echo   BUILD_WORKSPACE_DIRECTORY=%BUILD_WORKSPACE_DIRECTORY%
 echo   RUNFILES_DIR=%RUNFILES_DIR%
 echo   RUNFILES_MANIFEST_FILE=%RUNFILES_MANIFEST_FILE%
 
-REM Check if no arguments provided
-if "%~1"=="" (
-    set "ARGS_FILE=%~dpn0.args"
-    if exist "!ARGS_FILE!" (
-        echo #### Loading arguments from: !ARGS_FILE!
-        set /p ARGS_LINE=<"!ARGS_FILE!"
-        echo #### Loaded arguments: !ARGS_LINE!
-        
-        REM Convert forward slashes to backslashes for Windows
-        REM TODO: generate with backslashes in the first place to avoid this step
-        set "ARGS_LINE=!ARGS_LINE:/=\!"
-        echo #### Execute: !ARGS_LINE!
-        cmd /c !ARGS_LINE!
-        set _ERR=!ERRORLEVEL!
-        echo #### Error: !_ERR!
-        exit /b !_ERR!
-    ) else (
-        echo #### ERROR: No arguments provided and args file not found: !ARGS_FILE! >&2
-        exit /b 1
-    )
+REM Try to load arguments from .args file (prepend to provided args)
+set "ARGS_FILE=%~dpn0.args"
+set "ARGS_LINE="
+if exist "!ARGS_FILE!" (
+    echo   ## Loading arguments: !ARGS_FILE!
+    set /p ARGS_LINE=<"!ARGS_FILE!"
+    echo   ## Loaded from file: !ARGS_LINE!
+    
+    REM Convert forward slashes to backslashes for Windows
+    REM TODO: generate with backslashes in the first place to avoid this step
+    set "ARGS_LINE=!ARGS_LINE:/=\!"
 )
 
-echo #### Execute: %*
-"%1" %2 %3 %4 %5 %6 %7 %8 %9
-set _ERR=%ERRORLEVEL%
-echo #### Error: %_ERR%
-exit /b %_ERR%
+REM Combine file args with provided args
+set "FULL_ARGS=!ARGS_LINE! %*"
+set "FULL_ARGS=!FULL_ARGS:~0,-1!"
+for /f "tokens=* delims= " %%a in ("!FULL_ARGS!") set "FULL_ARGS=%%a"
+
+REM Check if we have any arguments after loading
+if "!FULL_ARGS!"=="" (
+    echo ## ERROR: No arguments provided and args file not found or empty: !ARGS_FILE! >&2
+    exit /b 1
+)
+
+echo ## Execute: !FULL_ARGS!
+cmd /c !FULL_ARGS!
+set _ERR=!ERRORLEVEL!
+echo ## [%_basename%] Errorcode: !_ERR!
+exit /b !_ERR!
