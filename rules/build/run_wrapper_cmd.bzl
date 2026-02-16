@@ -1,6 +1,5 @@
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
-# load(":run_wrapper.bzl", "run_wrapper")
 
 _runner_target = Label("//runner:runner")
 _sh_wrapper_target = Label("//runner:sh_wrapper.cmd")
@@ -14,14 +13,6 @@ def make_run_wrapper_cmd(name, bin_target, is_test=False, **kwargs):
         is_test: Whether this wrapper must be a test target. Defaults to False.
         **kwargs: Additional keyword arguments passed to sh_binary or sh_test.
     """
-
-    # run_wrapper(
-    #     name = "{}.run".format(name),
-    #     target_binary = bin_target,
-    #     target_args = kwargs.get("args", []),
-    #     tags = kwargs.get("tags", []),
-    #     visibility = kwargs.get("visibility", ["//visibility:public"]),
-    # )
 
     #
     # TODO: can be optimized by single rule that generates wrapper script and runs it without intermediate file with arguments
