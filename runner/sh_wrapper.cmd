@@ -39,6 +39,21 @@ echo -n "$_DIM"
     done
 }
 
+# --- begin runfiles initialization ---
+if [[ ! -d "${RUNFILES_DIR:-/dev/null}" && ! -f "${RUNFILES_MANIFEST_FILE:-/dev/null}" ]]; then
+    if [[ -f "$0.runfiles_manifest" ]]; then
+        export RUNFILES_MANIFEST_FILE="$0.runfiles_manifest"
+        echo "  export RUNFILES_MANIFEST_FILE=$RUNFILES_MANIFEST_FILE"
+    elif [[ -f "$0.runfiles/MANIFEST" ]]; then
+        export RUNFILES_MANIFEST_FILE="$0.runfiles/MANIFEST"
+        echo "  export RUNFILES_MANIFEST_FILE=$RUNFILES_MANIFEST_FILE"
+    elif [[ -f "$0.runfiles/bazel_tools/tools/bash/runfiles/runfiles.bash" ]]; then
+        export RUNFILES_DIR="$0.runfiles"
+        echo "  export RUNFILES_DIR=$RUNFILES_DIR"
+    fi
+fi
+# --- end runfiles initialization ---
+
 # Try to load arguments from .args file (prepend to provided args)
 ARGS_FILE="${0%.cmd}.args"
 if [ -f "$ARGS_FILE" ]; then
@@ -120,6 +135,29 @@ for %%v in (
         call echo   %%v=%%!%%v!%%
     )
 )
+
+REM --- begin runfiles initialization ---
+: if not defined RUNFILES_DIR if not defined RUNFILES_MANIFEST_FILE (
+:     if exist "%~f0.runfiles_manifest" (
+:         set "RUNFILES_MANIFEST_FILE=%~f0.runfiles_manifest"
+:     ) else if exist "%~f0.runfiles\MANIFEST" (
+:         set "RUNFILES_MANIFEST_FILE=%~f0.runfiles\MANIFEST"
+:     ) else if exist "%~f0.runfiles\bazel_tools\tools\bash\runfiles\runfiles.bash" (
+:         set "RUNFILES_DIR=%~f0.runfiles"
+:     )
+: )
+: When rules_python is used w/o register_toolchain "@rules_python//python/runtime_env_toolchains:all" on Windows w/ symlinks, 
+:   then py_binary (runner) that is executed inside sh_binary (this wrapper) incorretly handles `bazel_site_init` in launcher script.
+: It works correctly on macOS/Linux but on Windows the launcher fails to find the runfiles and setup built site-packages (because of wrong default RUNFILES_DIR setup).
+:   It also fails to setup site packages when RUNFILES_MANIFEST_FILE is used.
+: Workaround this issue by by setting correct RUNFILES_DIR explicitly here.
+if not defined RUNFILES_DIR (
+    if exist "%~f0.runfiles" (
+        set "RUNFILES_DIR=%~f0.runfiles"
+        echo   set RUNFILES_DIR=!RUNFILES_DIR!
+    )
+)
+REM --- end runfiles initialization ---
 
 REM Try to load arguments from .args file (prepend to provided args)
 set "ARGS_FILE=%~dpn0.args"
