@@ -166,10 +166,6 @@ if exist "!ARGS_FILE!" (
     echo   ## Loading: !ARGS_FILE!
     set /p ARGS_LINE=<"!ARGS_FILE!"
     echo   ## Loaded: !ARGS_LINE!
-    
-    REM Convert forward slashes to backslashes for Windows
-    REM TODO: generate with backslashes in the first place to avoid this step
-    set "ARGS_LINE=!ARGS_LINE:/=\!"
 )
 
 REM Combine file args with provided args
@@ -184,6 +180,10 @@ if "!FULL_ARGS!"=="" (
     echo !_RESET!## ERROR: No arguments provided and args file not found or empty: !ARGS_FILE! >&2
     exit /b 1
 )
+
+REM Convert forward slashes to backslashes before execution (otherwise error "'..' is not recognized as an internal or external command" for relative paths).
+REM TODO: convert only in paths or even better just find targets with runfiles
+set "FULL_ARGS=!FULL_ARGS:/=\!"
 
 echo !_RESET!## Execute: !FULL_ARGS!
 cmd /c !FULL_ARGS!
