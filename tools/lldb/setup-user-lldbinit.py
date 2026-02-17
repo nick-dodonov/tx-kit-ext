@@ -39,14 +39,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def create_config(target_path: Path, default_path: Path, config: Config) -> None:
-    """
-    Create a config file by copying the default template.
-
-    Args:
-        target_path: Path where the config should be created
-        default_path: Path to the default template file
-        config: Configuration object containing dryrun flag
-    """
+    """Create a config file by copying the default template."""
     print(f'⚙️  {"Would create" if config.dryrun else "Creating"}: {target_path}')
     if not config.dryrun:
         # Remove broken symlink if it exists
@@ -56,15 +49,7 @@ def create_config(target_path: Path, default_path: Path, config: Config) -> None
 
 
 def backup_file(file_path: Path) -> Path:
-    """
-    Create a timestamped backup of a file.
-
-    Args:
-        file_path: Path to the file to backup
-
-    Returns:
-        Path: Path to the backup file
-    """
+    """Create a timestamped backup of a file."""
     timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     backup_path = file_path.with_suffix(f".{timestamp}.bak")
     file_path.rename(backup_path)
@@ -72,14 +57,7 @@ def backup_file(file_path: Path) -> Path:
 
 
 def setup_config_file(target_path: Path, template_path: Path, config: Config) -> None:
-    """
-    Set up a configuration file from a template, handling backups if needed.
-
-    Args:
-        target_path: Path where the config file should be created
-        template_path: Path to the template file
-        config: Configuration object containing force and dryrun flags
-    """
+    """Set up a configuration file from a template, handling backups if needed."""
     if target_path.exists():
         if config.force:
             print(
@@ -102,12 +80,7 @@ def setup_config_file(target_path: Path, template_path: Path, config: Config) ->
 
 
 def setup_user_lldbinit(config: Config) -> None:
-    """
-    Set up user's .lldbinit file in home directory.
-
-    Args:
-        config: Configuration object containing force and dryrun flags
-    """
+    """Set up user's .lldbinit file in home directory."""
     user_lldbinit_path = Path.home() / ".lldbinit"
     default_user_lldbinit_path = Path(__file__).parent / "default.user.lldbinit"
     setup_config_file(user_lldbinit_path, default_user_lldbinit_path, config)
