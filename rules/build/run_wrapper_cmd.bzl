@@ -62,7 +62,7 @@ def make_run_wrapper_cmd(name, bin_target, is_test=False, **kwargs):
         **kwargs: Additional keyword arguments passed to sh_binary or sh_test.
     """
 
-    # TODO: possibly can be optimized by single rule that generates wrapper script and runs it without intermediate arguments file
+    #TODO: possibly can be optimized by single rule that generates wrapper script and runs it without intermediate arguments file
     runner_args_name = "{}.args".format(name)
     generate_run_wrapper_script(
         name = runner_args_name,
@@ -71,30 +71,15 @@ def make_run_wrapper_cmd(name, bin_target, is_test=False, **kwargs):
     )
 
     runner_cmd_name = "{}.cmd".format(name)
-    if not is_test:
-        sh_binary(
-            name = runner_cmd_name,
-            srcs = [_sh_wrapper_target],
-            data = [
-                runner_args_name,
-                _runner_target,
-                bin_target,
-            ],
-            # exec_compatible_with = [
-            #     "@platforms//os:windows",
-            #     "@platforms//os:macos",
-            #     "@platforms//os:linux",
-            # ],
-            **kwargs,
-        )
-    else:
-        sh_test(
-            name = runner_cmd_name,
-            srcs = [_sh_wrapper_target],
-            data = [
-                runner_args_name,
-                _runner_target,
-                bin_target,
-            ],
-            **kwargs,
-        )
+    sh_rule = sh_binary if not is_test else sh_test
+    sh_rule(
+        name = runner_cmd_name,
+        srcs = [_sh_wrapper_target],
+        data = [
+            runner_args_name,
+            _runner_target,
+            bin_target,
+        ],
+        #TODO: possibly restrict exec_compatible_with / target_compatible_with to host platforms only (using something as @platforms//os:HOST)
+        **kwargs,
+    )

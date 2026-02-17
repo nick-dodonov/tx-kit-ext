@@ -1,0 +1,5 @@
+load("//rules/build:multi_binary.bzl", "multi_binary")
+multi_binary(
+    name = "cc",
+    srcs = ["cc_src.cpp"],
+)
