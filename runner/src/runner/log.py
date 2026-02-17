@@ -24,12 +24,19 @@ if sys.platform == "win32":
 
 
 def info(*args: Any, **kwargs: Any) -> None:
-    """Print function with automatic flush."""
+    """Info with automatic flush."""
     print(*args, **kwargs, flush=True)
 
 
+def error(*args: Any, **kwargs: Any) -> None:
+    """Error with automatic flush."""
+    print(Fore.RED, end="")
+    print(*args, **kwargs)
+    print(Style.RESET_ALL, end="", flush=True)
+
+
 def trace(*args: Any, **kwargs: Any) -> None:
-    """Print function with automatic flush."""
+    """Trace with automatic flush."""
     print(Style.DIM, end="")
     print(*args, **kwargs)
     print(Style.RESET_ALL, end="", flush=True)

@@ -11,8 +11,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import runner.cmd
-from runner.log import info, trace, Fore, Style
-from . import find, context
+from .log import info, trace, error, Fore, Style
+from .context import Context
 
 
 @dataclass
@@ -34,223 +34,6 @@ class WasmOptions:
     file: str
     emrun: EmrunOptions | None
     args: list[str]
-
-
-class WasmRunner:
-    """Main WASM runner class."""
-    
-    def __init__(self):
-        self.build_working_dir = os.environ.get('BUILD_WORKING_DIRECTORY')
-        self.runfiles_dir = os.environ.get('RUNFILES_DIR')
-        self.bazel_test = os.environ.get('BAZEL_TEST')
-    
-    def _extract_from_tar_if_needed(self, base_path: Path) -> Path | None:
-        """Extract files from tar archive if the base file is a tar archive."""
-        import tarfile
-        import tempfile
-        
-        # Check if the base file (without extension) is a tar archive
-        tar_path = base_path
-        if tarfile.is_tarfile(tar_path):
-            trace(f"Found tar archive: {tar_path}")
-            
-            # Create temporary directory for extraction
-            temp_dir = Path(tempfile.mkdtemp(prefix="wasm_runner_"))
-            trace(f"Extracting to temporary directory: {temp_dir}")
-            
-            try:
-                with tarfile.open(tar_path, 'r') as tar:
-                    # Use filter='data' to avoid deprecation warning in Python 3.14+
-                    if hasattr(tarfile, 'data_filter'):
-                        tar.extractall(temp_dir, filter='data')
-                    else:
-                        tar.extractall(temp_dir)
-                
-                # Return the HTML file path from extracted files
-                html_name = base_path.with_suffix('.html').name
-                extracted_html = temp_dir / html_name
-                
-                if extracted_html.exists():
-                    trace(f"Successfully extracted HTML file: {extracted_html}")
-                    return extracted_html
-                else:
-                    trace(f"HTML file not found in extracted archive: {html_name}")
-                    return None
-                    
-            except Exception as e:
-                trace(f"Error extracting tar archive: {e}")
-                return None
-        
-        return None
-
-    def find_html_file(self, file_path: str) -> Path:
-        """Find the HTML file, handling different execution contexts."""
-        html_file = Path(file_path + '.html')
-        
-        # Strategy 1: Direct file access (common for bazel run)
-        if html_file.exists():
-            trace(f"  Found HTML file directly: {html_file}")
-            return html_file
-        
-        # Strategy 2: Try in build working directory (bazel run with BUILD_WORKING_DIRECTORY)
-        if self.build_working_dir:
-            # Try relative to build working directory
-            build_html = Path(self.build_working_dir) / html_file
-            if build_html.exists():
-                trace(f"  Found HTML file in build working directory: {build_html}")
-                return build_html
-            
-            # Try in bazel-bin directory
-            bazel_bin_html = Path(self.build_working_dir) / "bazel-bin" / html_file
-            if bazel_bin_html.exists():
-                trace(f"  Found HTML file in bazel-bin: {bazel_bin_html}")
-                return bazel_bin_html
-            
-            # Try extracting from tar in bazel-bin
-            bazel_bin_base = Path(self.build_working_dir) / "bazel-bin" / Path(file_path)
-            extracted = self._extract_from_tar_if_needed(bazel_bin_base)
-            if extracted:
-                return extracted
-        
-        # Strategy 3: Try in runfiles directory (bazel test)
-        if self.runfiles_dir:
-            # Try multiple runfiles paths for direct files
-            possible_direct_paths = [
-                Path("_main") / html_file,  # Direct path
-                Path("_main") / Path(str(html_file).split("bin/", 1)[-1]),  # Remove bin/ prefix
-                Path(str(html_file).replace("test/", "_main/test/")),  # Add _main prefix
-            ]
-            
-            for runfiles_html in possible_direct_paths:
-                if runfiles_html.exists():
-                    trace(f"Found HTML file using RUNFILES_DIR: {runfiles_html}")
-                    return runfiles_html
-            
-            # Try extracting from tar in runfiles
-            # The tar file is typically at _main/path/to/target
-            runfiles_tar_base = Path("_main") / Path(file_path)
-            extracted = self._extract_from_tar_if_needed(runfiles_tar_base)
-            if extracted:
-                return extracted
-        
-        # Strategy 4: Look for tar archive in current directory
-        current_tar_base = Path(file_path)
-        extracted = self._extract_from_tar_if_needed(current_tar_base)
-        if extracted:
-            return extracted
-        
-        # If all strategies fail, provide comprehensive error message
-        error_msg = f"HTML file not found: {html_file}\n"
-        error_msg += f"  Original file path: {file_path}\n"
-        error_msg += f"  Current working directory: {os.getcwd()}\n"
-        
-        if self.build_working_dir:
-            error_msg += f"  BUILD_WORKING_DIRECTORY: {self.build_working_dir}\n"
-            error_msg += f"  Tried bazel-bin paths\n"
-        
-        if self.runfiles_dir:
-            error_msg += f"  RUNFILES_DIR: {self.runfiles_dir}\n"
-            error_msg += f"  Tried runfiles paths and tar extraction\n"
-        
-        error_msg += f"Please ensure the target is built correctly"
-        
-        raise FileNotFoundError(error_msg)
-    
-    def make_cmd_with_node(self, html_file: Path, args: list[str]) -> list[str]:
-        """Run WASM using Node.js (test mode)."""
-        info(f"{Fore.MAGENTA}🚀 WASM Test mode (via node):{Style.RESET_ALL}")
-        trace(f"  cwd: {os.getcwd()}")
-        trace(f"  html: {html_file}")
-        
-        js_file = html_file.with_suffix('.js')
-        if not js_file.exists():
-            raise FileNotFoundError(f"JavaScript file not found: {js_file}")
-        
-        trace(f"  js: {js_file}")
-        if args:
-            trace(f"  args: {' '.join(args)}")
-        
-        cmd = ['node', str(js_file)] + args
-        return cmd
-
-    def make_cmd_with_emrun(self, html_file: Path, args: list[str], emrun: EmrunOptions) -> list[str]:
-        """Run WASM using emrun (run mode)."""
-        info(f"{Fore.MAGENTA}🚀 WASM Run mode (via emrun):{Style.RESET_ALL}")
-        trace(f"  cwd: {os.getcwd()}")
-        trace(f"  html: {html_file}")
-        if args:
-            trace(f"  args: {' '.join(args)}")
-        
-        # https://emscripten.org/docs/compiling/Running-html-files-with-emrun.html#controlling-log-output
-        cmd = [
-            'emrun',
-            # '--verbose',  # Print detailed information about emrun internal steps.
-            # '--system_info',  # Print detailed information about the current system before launching.
-            # '--browser_info',  # Print information about which browser is about to be launched.
-        ]
-        
-        # Only add kill arguments if nokill is not enabled
-        if not emrun.nokill:
-            cmd.extend(['--kill_start', '--kill_exit'])
-        
-        cmd.append('--browser=chrome')
-        
-        # https://peter.sh/experiments/chromium-command-line-switches/
-        browser_args = [
-            "--disable-background-networking", # Disable various network services (including prefetching and update checks)
-            "--allow-insecure-localhost", # Allow insecure connections to localhost
-            # "--cors-exempt-headers", # Disable CORS for all headers (to allow local file access)
-            # "--disable-web-security", # Disable same-origin policy (to allow local file access)
-        ]
-        
-        # Add devtools if enabled
-        if emrun.devtool:
-            browser_args.append("--auto-open-devtools-for-tabs") # Open devtools for each tab (intended to be used by developers and automation to not require user interaction for opening DevTools)
-        
-        # Add headless mode unless show is enabled
-        if not emrun.show:
-            browser_args.append("--headless")
-
-        cmd.append('--browser_args="{}"'.format(' '.join(browser_args)))
-
-        cmd.append(str(html_file))
-        if args:
-            cmd.append('--') # Separator for emrun to pass subsequent args to the WASM program
-            cmd.extend(args)
-        return cmd
-
-    def make_command(self, options: WasmOptions) -> runner.cmd.Command:
-        #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        # TODO: replace with external runfiles support !!
-        #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        cwd = None
-        cwd_descr = None
-        if self.build_working_dir:
-            cwd = self.build_working_dir
-            cwd_descr = "BUILD_WORKING_DIRECTORY"
-        elif self.runfiles_dir:  # For test mode, we need to cd into the runfiles directory to access the files correctly
-            cwd = self.runfiles_dir
-            cwd_descr = "RUNFILES_DIR"
-
-        # Validate emrun usage in test mode
-        if options.emrun and self.bazel_test and not self.build_working_dir:
-            raise ValueError("Cannot use --emrun in test mode without BUILD_WORKING_DIRECTORY")
-
-        try:
-            html_file = self.find_html_file(options.file)
-        except FileNotFoundError as e:
-            raise e
-
-        if options.emrun:
-            cmd = self.make_cmd_with_emrun(html_file, options.args, options.emrun)
-        else:
-            cmd = self.make_cmd_with_node(html_file, options.args)
-
-        return runner.cmd.Command(
-            cmd=cmd,
-            cwd=cwd,
-            cwd_descr=cwd_descr,
-        )
 
 
 def _parse_env_file(env_file: Path) -> list[str]:
@@ -283,11 +66,11 @@ def _parse_env_file(env_file: Path) -> list[str]:
             return args
 
     except Exception as e:
-        info(f"{Fore.RED}❌ Error reading file: {e}{Style.RESET_ALL}")
+        error(f"❌ Failed reading/parsing: {e}")
         return []
 
 
-def _read_env_file(ctx: context.Context) -> list[str]:
+def _read_env_file(ctx: Context) -> list[str]:
     """Read .env file (in the same directory as the target file) and extract WASM_RUNNER_ARGS arguments."""
 
     env_path = Path(ctx.options.file).with_name('.env')
@@ -298,20 +81,19 @@ def _read_env_file(ctx: context.Context) -> list[str]:
     return []
 
 
-def _parse_arguments(ctx: context.Context, args: list[str]) -> WasmOptions:
+def _parse_arguments(ctx: Context, args: list[str]) -> WasmOptions:
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
         description="WASM Runner - Run WebAssembly builds via Node.js or emrun",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  %(prog)s file.wasm                        # Run via Node.js
-  %(prog)s file.tar                         # Extract archived .wasm/.html and run
-  %(prog)s file.html --emrun                # Run via emrun (headless mode)
-  %(prog)s file.wasm -s                     # Run via emrun and show browser
-  %(prog)s file.wasm --show --arg1 value    # Run via emrun in browser passing arguments
-  %(prog)s file.wasm -n                     # Run via emrun, show browser, no kill existing instances
-  %(prog)s file.wasm -s -d                  # Run via emrun, show browser with DevTools
+  %(prog)s file                     # Extract archived .wasm/.html and run
+  %(prog)s file --emrun             # Run via emrun (headless mode)
+  %(prog)s file -s                  # Run via emrun and show browser
+  %(prog)s file --show --arg1 value # Run via emrun in browser passing arguments
+  %(prog)s file -n                  # Run via emrun, show browser, no kill existing instances
+  %(prog)s file -s -d               # Run via emrun, show browser with DevTools
         """,
     )
 
@@ -407,9 +189,143 @@ Examples:
     return options
 
 
-def make_wrapper_command(ctx: context.Context) -> runner.cmd.Command:
-    args = [str(ctx.found_file.resolve())] + ctx.options.args
-    
-    info(f"{Fore.MAGENTA}{Style.BRIGHT}⚙️  WASM Process {Style.DIM}{args}{Style.RESET_ALL}")
-    options = _parse_arguments(ctx, args)
-    return WasmRunner().make_command(options)
+def _log_important(msg: str) -> None:
+    info(f"{Fore.MAGENTA}{msg}{Style.RESET_ALL}")
+
+
+class WasmRunner:
+    """Main WASM runner class."""
+
+    def __init__(self, ctx: Context):
+        args = [str(ctx.found_file.resolve())] + ctx.options.args
+
+        _log_important(f"{Style.BRIGHT}⚙️  WASM Runner {Style.DIM}{args}")
+        self.options = _parse_arguments(ctx, args)
+
+    def _extract_from_tar_if_needed(self, base_path: Path) -> Path | None:
+        """Extract files from tar archive if the base file is a tar archive."""
+        import tarfile
+        import tempfile
+
+        # Check if the base file (without extension) is a tar archive
+        tar_path = base_path
+        if tarfile.is_tarfile(tar_path):
+            trace(f"Found tar archive: {tar_path}")
+
+            # Create temporary directory for extraction
+            temp_dir = Path(tempfile.mkdtemp(prefix="wasm_runner_"))
+            trace(f"Extracting to temporary directory: {temp_dir}")
+
+            try:
+                with tarfile.open(tar_path, 'r') as tar:
+                    # Use filter='data' to avoid deprecation warning in Python 3.14+
+                    if hasattr(tarfile, 'data_filter'):
+                        tar.extractall(temp_dir, filter='data')
+                    else:
+                        tar.extractall(temp_dir)
+
+                # Return the HTML file path from extracted files
+                html_name = base_path.with_suffix('.html').name
+                extracted_html = temp_dir / html_name
+
+                if extracted_html.exists():
+                    trace(f"Successfully extracted HTML file: {extracted_html}")
+                    return extracted_html
+                else:
+                    trace(f"HTML file not found in extracted archive: {html_name}")
+                    return None
+
+            except Exception as e:
+                trace(f"Error extracting tar archive: {e}")
+                return None
+
+        return None
+
+    def _find_html_file(self, file_path: str) -> Path:
+        """Find the HTML file, handling different execution contexts."""
+
+        # Expect path as tar archive
+        current_tar_base = Path(file_path)
+        extracted = self._extract_from_tar_if_needed(current_tar_base)
+        if extracted:
+            return extracted
+
+        raise FileNotFoundError(f"HTML file not found in TAR: {file_path}")
+
+    def _make_cmd_with_node(self, html_file: Path, args: list[str]) -> list[str]:
+        """Run WASM using Node.js (console mode)."""
+        _log_important(f"🚀 WASM Console mode (via node)")
+        trace(f"  cwd: {os.getcwd()}")
+        trace(f"  html: {html_file}")
+
+        js_file = html_file.with_suffix('.js')
+        if not js_file.exists():
+            raise FileNotFoundError(f"JavaScript file not found: {js_file}")
+
+        trace(f"  js: {js_file}")
+        if args:
+            trace(f"  args: {' '.join(args)}")
+
+        cmd = ['node', str(js_file)] + args
+        return cmd
+
+    def _make_cmd_with_emrun(self, html_file: Path, args: list[str], emrun: EmrunOptions) -> list[str]:
+        """Run WASM using emrun (browser mode)."""
+        _log_important(f"🚀 WASM Browser mode (via emrun)")
+        trace(f"  cwd: {os.getcwd()}")
+        trace(f"  html: {html_file}")
+        if args:
+            trace(f"  args: {' '.join(args)}")
+
+        # https://emscripten.org/docs/compiling/Running-html-files-with-emrun.html#controlling-log-output
+        cmd = [
+            'emrun',
+            # '--verbose',  # Print detailed information about emrun internal steps.
+            # '--system_info',  # Print detailed information about the current system before launching.
+            # '--browser_info',  # Print information about which browser is about to be launched.
+        ]
+
+        # Only add kill arguments if nokill is not enabled
+        if not emrun.nokill:
+            cmd.extend(['--kill_start', '--kill_exit'])
+
+        cmd.append('--browser=chrome')
+
+        # https://peter.sh/experiments/chromium-command-line-switches/
+        browser_args = [
+            "--disable-background-networking", # Disable various network services (including prefetching and update checks)
+            "--allow-insecure-localhost", # Allow insecure connections to localhost
+            # "--cors-exempt-headers", # Disable CORS for all headers (to allow local file access)
+            # "--disable-web-security", # Disable same-origin policy (to allow local file access)
+        ]
+
+        # Add devtools if enabled
+        if emrun.devtool:
+            browser_args.append("--auto-open-devtools-for-tabs") # Open devtools for each tab (intended to be used by developers and automation to not require user interaction for opening DevTools)
+
+        # Add headless mode unless show is enabled
+        if not emrun.show:
+            browser_args.append("--headless")
+
+        cmd.append('--browser_args="{}"'.format(' '.join(browser_args)))
+
+        cmd.append(str(html_file))
+        if args:
+            cmd.append('--') # Separator for emrun to pass subsequent args to the WASM program
+            cmd.extend(args)
+        return cmd
+
+    def make_command(self) -> runner.cmd.Command:
+        options = self.options
+        html_file = self._find_html_file(options.file)
+
+        if options.emrun:
+            cmd = self._make_cmd_with_emrun(html_file, options.args, options.emrun)
+        else:
+            cmd = self._make_cmd_with_node(html_file, options.args)
+
+        return runner.cmd.Command(
+            cmd=cmd,
+            cwd=None,
+            cwd_descr=None,
+        )

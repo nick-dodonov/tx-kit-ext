@@ -62,7 +62,7 @@ def _main(options: Options) -> int:
             finder=finder,
             found_file=found_file,
         )
-        command = wasm.make_wrapper_command(ctx)
+        command = wasm.WasmRunner(ctx).make_command()
     elif platform == Platform.EXEC:
         command = cmd.Command(cmd=cmd_with_args)
     elif platform == Platform.PYTHON:
