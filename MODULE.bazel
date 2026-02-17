@@ -27,13 +27,42 @@ bazel_dep(name = "protobuf", version = "34.0-rc1")
 
 # WASM build support
 bazel_dep(name = "emsdk", version = "4.0.17")
-#TODO: find the way for local emsdk toolchain via .bazelrc config/overrides (same as w/ make/cmake/ninja/pkg_config/etc)
+# TODO: find the way for local emsdk toolchain via .bazelrc config/overrides (same as w/ make/cmake/ninja/pkg_config/etc)
 # use_extension("@emsdk//bazel:extensions.bzl", "emsdk_extension").configure(
 #   emsdk_dir = "/Users/nik/emsdk",
 #   enable_override = True,
 # )
 
-# Tools dependencies
+# TODO: ?? Don't need it ?? # Configure emscripten deps extension to download and register toolchains
+# emscripten_deps = use_extension("@emsdk//:emscripten_deps.bzl", "emscripten_deps")
+# use_repo(emscripten_deps, "emscripten_bin_linux")
+# use_repo(emscripten_deps, "emscripten_bin_linux_arm64")
+# use_repo(emscripten_deps, "emscripten_bin_mac")
+# use_repo(emscripten_deps, "emscripten_bin_mac_arm64")
+# use_repo(emscripten_deps, "emscripten_bin_win")
+
+# Register emscripten toolchains (workaround for building on Windows ARM64)
+register_toolchains(
+    "@emsdk//emscripten_toolchain:cc-toolchain-wasm-emscripten_linux",
+    "@emsdk//emscripten_toolchain:cc-toolchain-wasm-emscripten_linux_arm64",
+    "@emsdk//emscripten_toolchain:cc-toolchain-wasm-emscripten_mac",
+    "@emsdk//emscripten_toolchain:cc-toolchain-wasm-emscripten_mac_arm64",
+    "@emsdk//emscripten_toolchain:cc-toolchain-wasm-emscripten_win",
+    # Custom toolchain for Windows ARM64 (uses x86_64 binaries via emulation)
+    "//toolchains/emscripten:cc-toolchain-wasm-win_arm64",
+)
+
+# TODO: # Configure emscripten cache
+# emscripten_cache = use_extension("@emsdk//:emscripten_cache.bzl", "emscripten_cache")
+# use_repo(emscripten_cache, "emscripten_cache")
+
+# TODO: # Configure nodejs from rules_nodejs for hermetic testing
+# bazel_dep(name = "rules_nodejs", version = "6.7.3", dev_dependency = True)
+# node = use_extension("@rules_nodejs//nodejs:extensions.bzl", "node", dev_dependency = True)
+# node.toolchain(node_version = "20.18.0")
+# use_repo(node, "nodejs")
+
+# Configure Python for tools and build extensions
 bazel_dep(name = "rules_python", version = "1.8.4")
 
 python = use_extension("@rules_python//python/extensions:python.bzl", "python")
