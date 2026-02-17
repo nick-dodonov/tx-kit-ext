@@ -49,6 +49,9 @@ def create_config(target_path: Path, default_path: Path, config: Config) -> None
     """
     print(f'⚙️  {"Would create" if config.dryrun else "Creating"}: {target_path}')
     if not config.dryrun:
+        # Remove broken symlink if it exists
+        if target_path.is_symlink() and not target_path.exists():
+            target_path.unlink()
         target_path.write_text(default_path.read_text())
 
 
