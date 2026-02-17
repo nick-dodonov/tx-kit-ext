@@ -55,15 +55,15 @@ def _get_default_linkopts():
 
 def _get_copts(user_copts):
     """Merges user copts with default platform-specific ones."""
-    return _get_default_copts() + user_copts
+    return _get_default_copts() + (user_copts if user_copts != None else [])
 
 def _get_cxxopts(user_cxxopts):
     """Merges user cxxopts with default platform-specific ones."""
-    return _get_default_cxxopts() + user_cxxopts
+    return _get_default_cxxopts() + (user_cxxopts if user_cxxopts != None else [])
 
 def _get_linkopts(user_linkopts):
     """Merges user linkopts with default platform-specific ones."""
-    return _get_default_linkopts() + user_linkopts
+    return _get_default_linkopts() + (user_linkopts if user_linkopts != None else [])
 
 tx_cc = struct(
     get_default_copts = _get_default_copts,

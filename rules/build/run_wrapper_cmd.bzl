@@ -61,6 +61,8 @@ def make_run_wrapper_cmd(name, bin_target, is_test=False, **kwargs):
         is_test: Whether this wrapper must be a test target. Defaults to False.
         **kwargs: Additional keyword arguments passed to sh_binary or sh_test.
     """
+    if not name.endswith(".cmd"):
+        fail("Runner wrapper name must end with .cmd extension (hybrid executable for macOS/Windows/Linux).")
 
     #TODO: possibly can be optimized by single rule that generates wrapper script and runs it without intermediate arguments file
     runner_args_name = "{}.args".format(name)
@@ -70,10 +72,9 @@ def make_run_wrapper_cmd(name, bin_target, is_test=False, **kwargs):
         testonly = kwargs.get("testonly", False),
     )
 
-    runner_cmd_name = "{}.cmd".format(name)
     sh_rule = sh_binary if not is_test else sh_test
     sh_rule(
-        name = runner_cmd_name,
+        name = name,
         srcs = [_sh_wrapper_target],
         data = [
             runner_args_name,

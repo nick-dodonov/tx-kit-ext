@@ -55,7 +55,7 @@ fi
 # --- end runfiles initialization ---
 
 # Try to load arguments from .args file (prepend to provided args)
-ARGS_FILE="${0%.cmd}.args"
+ARGS_FILE="$0.args"
 if [ -f "$ARGS_FILE" ]; then
     echo "  ## Loading: $ARGS_FILE"
     read -r ARGS_LINE < "$ARGS_FILE"
@@ -160,7 +160,7 @@ if not defined RUNFILES_DIR (
 REM --- end runfiles initialization ---
 
 REM Try to load arguments from .args file (prepend to provided args)
-set "ARGS_FILE=%~dpn0.args"
+set "ARGS_FILE=%~f0.args"
 set "ARGS_LINE="
 if exist "!ARGS_FILE!" (
     echo   ## Loading: !ARGS_FILE!

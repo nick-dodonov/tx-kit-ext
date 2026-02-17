@@ -1,15 +1,22 @@
-load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
-load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
-load("@emsdk//emscripten_toolchain:wasm_rules.bzl", "wasm_cc_binary")
-load("//rules/build:run_wrapper_cmd.bzl", "generate_run_wrapper_script")
+"""Build rule for creating multi-platform binaries based on the same source and available in the same execution environment."""
 
-_runner_target = Label("//runner:runner")
+load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+load("@emsdk//emscripten_toolchain:wasm_rules.bzl", "wasm_cc_binary")
+load(":run_wrapper_cmd.bzl", "make_run_wrapper_cmd")
+load(":tx_common.bzl", "tx_cc")
 
 
 def _multi_binary_impl(name, visibility, **kwargs):
+    #print(kwargs)
+    kwargs["copts"] = tx_cc.get_copts(kwargs.pop("copts", []))
+    kwargs["cxxopts"] = tx_cc.get_cxxopts(kwargs.pop("cxxopts", []))
+    kwargs["linkopts"] = tx_cc.get_linkopts(kwargs.pop("linkopts", []))
+
+    #TODO: exclude atribute from inheritence
     if kwargs["target_compatible_with"] != None:
         fail("multi_binary does not support target_compatible_with attribute")
 
+    # Current target configuration platform binary
     kwargs["target_compatible_with"] = select({
         "@platforms//cpu:wasm32": ["@platforms//:incompatible"],
         "//conditions:default": [],
@@ -20,6 +27,7 @@ def _multi_binary_impl(name, visibility, **kwargs):
         **kwargs,
     )
 
+    # WASM specific targets including runner wrapper
     kwargs["target_compatible_with"] = ["@platforms//cpu:wasm32"]
     cc_binary(
         name = "{}-wasm.tar".format(name),
@@ -32,21 +40,12 @@ def _multi_binary_impl(name, visibility, **kwargs):
         cc_target = ":{}-wasm.tar".format(name),
     )
 
-    generate_run_wrapper_script(
-        name = "{}-wasm-run.cmd".format(name),
+    make_run_wrapper_cmd(
+        name = "{}-wasm.cmd".format(name),
         bin_target = ":{}-wasm".format(name),
     )
 
-    sh_binary(
-        name = "{}-wasm.cmd".format(name),
-        srcs = ["{}-wasm-run.cmd".format(name)],
-        data = [
-            _runner_target,
-            ":{}-wasm".format(name),
-        ],
-        visibility = visibility,
-    )
-
+    # Alias to simplify build/run for current target platform
     native.alias(
         name = name,
         actual = select({

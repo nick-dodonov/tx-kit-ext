@@ -28,8 +28,9 @@ def tx_test(name, **kwargs):
         **kwargs
     )
 
+    cmd_name = "{}.cmd".format(name)
     make_run_wrapper_cmd(
-        name = name,
+        name = cmd_name,
         bin_target = ":{}".format(bin_name),
         is_test = True,
 
@@ -41,6 +42,6 @@ def tx_test(name, **kwargs):
     # not native.alias allowing to `bazel test` the target
     native.test_suite(
         name = name,
-        tests = [":{}.cmd".format(name)],
+        tests = [":{}".format(cmd_name)],
         tags = tags,
     )

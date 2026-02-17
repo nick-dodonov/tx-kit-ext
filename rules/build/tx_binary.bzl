@@ -21,14 +21,15 @@ def tx_binary(name, **kwargs):
         **kwargs
     )
 
+    cmd_name = "{}.cmd".format(name)
     make_run_wrapper_cmd(
-        name = name,
+        name = cmd_name,
         bin_target = ":{}".format(bin_name),
         tags = ["manual"],
     )
 
     native.alias(
         name = name,
-        actual = ":{}.cmd".format(name),
+        actual = ":{}".format(cmd_name),
         tags = ["manual"],
     )
