@@ -37,6 +37,11 @@ def _detect_platform(file: Path) -> Platform:
     if real_file != file:
         info(f"  {Style.DIM}Real: {real_file}{Style.RESET_ALL}")
 
+    if real_file.is_dir():
+        info(f"  {Style.DIM}Type: <directory>{Style.RESET_ALL}")
+        # TODO: check if it contains wasm files
+        return Platform.WASM
+
     kind = filetype.guess(real_file)
     if kind:
         info(f"  {Style.DIM}Type: {kind.mime} ({kind.extension}){Style.RESET_ALL}")

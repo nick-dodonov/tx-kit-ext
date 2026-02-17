@@ -207,7 +207,16 @@ class WasmRunner:
         import tarfile
         import tempfile
 
-        # Check if the base file (without extension) is a tar archive
+        # Check it is a directory (already extracted, e.g. via wasm_cc_binary rule)
+        if base_path.is_dir():
+            trace(f"Found directory: {base_path}")
+            # Find the HTML file in the directory (assuming it has the same name as the tar but with .html extension)
+            html_file = base_path / base_path.with_suffix('.html').name
+            if html_file.exists():
+                return html_file
+            raise FileNotFoundError(f"HTML file not found in directory: {html_file}")
+
+        # Check it is a tar archive
         tar_path = base_path
         if tarfile.is_tarfile(tar_path):
             trace(f"Found tar archive: {tar_path}")
