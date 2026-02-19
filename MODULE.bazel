@@ -22,10 +22,12 @@ bazel_dep(name = "rules_foreign_cc", version = "0.15.1")
 bazel_dep(name = "rules_shell", version = "0.6.1")
 bazel_dep(name = "bazel_skylib", version = "1.9.0")
 
-# Override protobuf version to avoid Python 3.8-3.10 toolchain requirements
-bazel_dep(name = "protobuf", version = "34.0-rc1")
+# Disabled protobuf override because rules_android already depends on good 33.4 (and 0.7.1 cannot have higher)
+# bazel_dep(name = "protobuf", version = "34.0-rc1")  # Override protobuf version to avoid Python 3.8-3.10 toolchain requirements
 
-# WASM build support
+################################################################
+# WASM / Emscripten build support
+################################################################
 bazel_dep(name = "emsdk", version = "4.0.17")
 # TODO: find the way for local emsdk toolchain via .bazelrc config/overrides (same as w/ make/cmake/ninja/pkg_config/etc)
 # use_extension("@emsdk//bazel:extensions.bzl", "emsdk_extension").configure(
@@ -61,6 +63,45 @@ register_toolchains(
 # node = use_extension("@rules_nodejs//nodejs:extensions.bzl", "node", dev_dependency = True)
 # node.toolchain(node_version = "20.18.0")
 # use_repo(node, "nodejs")
+
+################################################################
+# Android build support
+################################################################
+
+# Android SDK configure
+#   https://bazel.build/start/android-app
+#   https://github.com/bazelbuild/examples/tree/main/android
+bazel_dep(name = "rules_android", version = "0.7.1")
+
+register_toolchains(
+    "@rules_android//toolchains/android:android_default_toolchain",
+    "@rules_android//toolchains/android_sdk:android_sdk_tools",
+)
+
+android_sdk_repository_extension = use_extension(
+    "@rules_android//rules/android_sdk_repository:rule.bzl", 
+    "android_sdk_repository_extension"
+)
+use_repo(android_sdk_repository_extension, "androidsdk")
+
+register_toolchains("@androidsdk//:sdk-toolchain", "@androidsdk//:all")
+
+# Android NDK configure
+#   https://bazel.build/docs/android-ndk
+#   https://github.com/bazelbuild/rules_android_ndk/tree/main/examples/basic
+bazel_dep(name = "rules_android_ndk", version = "0.1.3")
+
+android_ndk_repository_extension = use_extension(
+    "@rules_android_ndk//:extension.bzl", 
+    "android_ndk_repository_extension"
+)
+use_repo(android_ndk_repository_extension, "androidndk")
+
+register_toolchains("@androidndk//:all")
+
+################################################################
+# Python build support
+################################################################
 
 # Configure Python for tools and build extensions
 bazel_dep(name = "rules_python", version = "1.8.4")
