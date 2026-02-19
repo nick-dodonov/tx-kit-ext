@@ -7,7 +7,7 @@ package(
 
 android_binary(
     name = "app",
-    manifest = "AndroidManifest.xml",
+    manifest = "main/AndroidManifest.xml",
     deps = [
         ":applib",
     ],
@@ -15,9 +15,14 @@ android_binary(
 
 android_library(
     name = "applib",
-    srcs = glob(["*.java"]),
-    manifest = "AndroidManifest.xml",
-    resource_files = glob(["res/**"]),
+    manifest = "main/AndroidManifest.xml",
+    srcs = glob([
+        "main/java/com/app/*.java"
+    ]),
+    resource_files = glob([
+        "main/res/**"
+    ]),
+    custom_package = "",
     deps = [
         ":jni",
     ],
@@ -25,14 +30,14 @@ android_library(
 
 cc_library(
     name = "jni",
-    srcs = ["cpp/jni.cc"],
+    srcs = ["main/cpp/jni.cc"],
     deps = [":jni_dep"],
 )
 
 cc_library(
     name = "jni_dep",
-    srcs = ["cpp/jni_dep.cc"],
-    hdrs = ["cpp/jni_dep.h"],
+    srcs = ["main/cpp/jni_dep.cc"],
+    hdrs = ["main/cpp/jni_dep.h"],
     linkopts = [
         "-llog"
     ],

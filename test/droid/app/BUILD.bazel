@@ -1,4 +1,4 @@
 alias(
     name = "app", 
-    actual = "//test/droid/app/src/main/java/com/app:app"
+    actual = "//test/droid/app/src:app"
 )
