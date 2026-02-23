@@ -5,7 +5,7 @@
 
     <uses-sdk
         android:minSdkVersion="21"
-        android:targetSdkVersion="26" />
+        android:targetSdkVersion="35" />
 
     <application android:label="Bazel Test App" >
         <activity

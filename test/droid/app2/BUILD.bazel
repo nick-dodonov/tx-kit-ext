@@ -1,0 +1,4 @@
+alias(
+    name = "app2", 
+    actual = "//test/droid/app2/src:app"
+)

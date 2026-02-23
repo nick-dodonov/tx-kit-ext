@@ -1,0 +1,25 @@
+# Bazel output directories (symlinks)
+bazel-bin
+bazel-out
+bazel-testlogs
+bazel-tx-kit-ext
+external
+
+# Nested Bazel projects with their own output directories
+test/droid/ndk_example
+test/droid/tuturial
+
+# Python cache
+__pycache__
+*.pyc
+.pytest_cache
+
+# IDE and editor files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store

@@ -1,0 +1,30 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.app"
+    android:versionCode="1"
+    android:versionName="1.0" >
+
+    <uses-sdk
+        android:minSdkVersion="21"
+        android:targetSdkVersion="35" />
+
+    <!-- hasCode is set to false to prevent the need for a dex file, which is not needed for native activities. -->
+    <application 
+        android:label="Bazel Test App2"
+        android:hasCode="false"
+        >
+        <!-- exported is set to true to allow the activity to be launched from outside the app. -->
+        <activity
+            android:name="android.app.NativeActivity"
+            android:exported="true" >
+
+            <meta-data
+                android:name="android.app.lib_name"
+                android:value="app" />
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
