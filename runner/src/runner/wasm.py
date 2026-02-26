@@ -210,11 +210,14 @@ class WasmRunner:
         # Check it is a directory (already extracted, e.g. via wasm_cc_binary rule)
         if base_path.is_dir():
             trace(f"Found directory: {base_path}")
-            # Find the HTML file in the directory (assuming it has the same name as the tar but with .html extension)
-            html_file = base_path / base_path.with_suffix('.html').name
-            if html_file.exists():
-                return html_file
-            raise FileNotFoundError(f"HTML file not found in directory: {html_file}")
+            html_files = list[Path](base_path.glob("*.html"))
+            if len(html_files) == 0:
+                raise FileNotFoundError(f"No HTML file found in directory: {base_path}")
+            if len(html_files) > 1:
+                raise FileNotFoundError(
+                    f"Multiple HTML files found in directory {base_path}: {[f.name for f in html_files]}"
+                )
+            return html_files[0]
 
         # Check it is a tar archive
         tar_path = base_path

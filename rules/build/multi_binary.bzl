@@ -9,51 +9,53 @@ load(":tx_common.bzl", "tx_cc")
 
 
 def _multi_binary_impl(name, visibility, **kwargs):
+    #TODO: exclude attribute from inheritence
+    if kwargs.pop("target_compatible_with", None) != None:
+        fail("multi_binary does not support target_compatible_with attribute")
+
     kwargs["copts"] = tx_cc.get_copts(kwargs.pop("copts", []))
     kwargs["cxxopts"] = tx_cc.get_cxxopts(kwargs.pop("cxxopts", []))
     kwargs["linkopts"] = tx_cc.get_linkopts(kwargs.pop("linkopts", []))
 
-    #TODO: exclude atribute from inheritence
-    if kwargs["target_compatible_with"] != None:
-        fail("multi_binary does not support target_compatible_with attribute")
-
     # Current target configuration platform binary
-    kwargs["target_compatible_with"] = select({
-        "@platforms//cpu:wasm32": ["@platforms//:incompatible"],
-        "//conditions:default": [],
-    })
     cc_binary(
         name = "{}-host".format(name),
         visibility = visibility,
+        target_compatible_with = select({
+            "@platforms//cpu:wasm32": ["@platforms//:incompatible"],
+            "//conditions:default": [],
+        }),
         **kwargs,
     )
 
     # WASM specific targets including runner wrapper
-    kwargs["target_compatible_with"] = ["@platforms//cpu:wasm32"]
     cc_binary(
         name = "{}-wasm.tar".format(name),
         visibility = visibility,
+        target_compatible_with = ["@platforms//cpu:wasm32"],
         **kwargs,
     )
 
     wasm_cc_binary(
-        name = "{}-wasm".format(name),
+        name = "{}-wasm.dir".format(name),
         cc_target = ":{}-wasm.tar".format(name),
+        visibility = visibility,
     )
 
     make_run_wrapper_cmd(
         name = "{}-wasm.cmd".format(name),
-        bin_target = ":{}-wasm".format(name),
+        bin_target = ":{}-wasm.dir".format(name),
+        visibility = visibility,
     )
 
     # Alias to simplify build/run for current target platform
     native.alias(
         name = name,
+        visibility = visibility,
         actual = select({
             "//conditions:default": ":{}-host".format(name),
             "@platforms//cpu:wasm32": ":{}-wasm.cmd".format(name),
         }),
-        visibility = visibility,
     )
 
 
