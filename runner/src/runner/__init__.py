@@ -72,13 +72,13 @@ def _main(options: Options) -> int:
         )
         command = droid.DroidRunner(ctx).make_command()
     elif platform == Platform.EXEC:
-        command = cmd.Command(cmd=cmd_with_args)
+        command = cmd.RunCommand(cmd=cmd_with_args)
     elif platform == Platform.PYTHON:
-        command = cmd.Command(cmd=["python3"] + cmd_with_args)
+        command = cmd.RunCommand(cmd=["python3"] + cmd_with_args)
     else:
         raise ValueError(f"Unsupported platform: {platform}")
 
-    descr = Path(command.cmd[0]).name
+    descr = command.descr
     return command.scoped_execute(f"[{platform.value.upper()}: {descr}]")
 
 

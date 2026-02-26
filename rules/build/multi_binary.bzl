@@ -88,21 +88,23 @@ def _multi_binary_impl(name, visibility, **kwargs):
     # Droid (Android) specific targets including runner wrapper
     droid_name = "{}-droid".format(name)
     droid_deps_final = droid_deps if droid_deps else _DEFAULT_DROID_DEPS
+    # Use explicit list; droid_linkopts from inherit_attrs can be select() that resolves empty for android
     droid_linkopts_final = droid_linkopts if droid_linkopts else _DEFAULT_DROID_LINKOPTS
 
-    droid_lib_kwargs = {k: v for k, v in kwargs.items() if k not in _CC_BINARY_ONLY_ATTRS}
+    _droid_exclude = _CC_BINARY_ONLY_ATTRS + ["linkopts", "main"]
+    droid_lib_kwargs = {k: v for k, v in kwargs.items() if k not in _droid_exclude}
     droid_lib_kwargs["srcs"] = kwargs.get("srcs", [])
     droid_lib_kwargs["deps"] = kwargs.get("deps", []) + droid_deps_final + [_DROID_MAIN_LIB]
-    droid_lib_kwargs["linkopts"] = kwargs.get("linkopts", []) + droid_linkopts_final
-    droid_lib_kwargs.pop("main", None)  # cc_library has no main
 
     cc_library(
         name = "{}.lib".format(droid_name),
         visibility = visibility,
         target_compatible_with = ["@platforms//os:android"],
+        linkopts = _DEFAULT_DROID_LINKOPTS,
         **droid_lib_kwargs,
     )
 
+    droid_apk_name = "{}-apk".format(droid_name)
     if droid_manifest != None:
         manifest_src = droid_manifest
     else:
@@ -112,14 +114,14 @@ def _multi_binary_impl(name, visibility, **kwargs):
             srcs = [_DROID_MANIFEST_TEMPLATE],
             outs = ["AndroidManifest.xml"],
             cmd = "sed 's/__LIB_NAME__/{}/' $(location {}) > $@".format(
-                droid_name,
+                droid_apk_name,
                 _DROID_MANIFEST_TEMPLATE,
             ),
         )
         manifest_src = ":{}".format(manifest_gen)
 
     android_binary(
-        name = "{}-apk".format(droid_name),
+        name = droid_apk_name,
         manifest = manifest_src,
         deps = [":{}.lib".format(droid_name)],
         visibility = visibility,

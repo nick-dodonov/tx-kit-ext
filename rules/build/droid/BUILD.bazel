@@ -4,7 +4,7 @@ exports_files([
     "AndroidManifest.xml.template",
 ])
 
-# Standalone cc_library for droid bridge - compiles in this package so native_app_glue include works.
+# Bridge library: compiles in this package so native_app_glue include works.
 cc_library(
     name = "droid_main",
     srcs = ["droid_main.cc"],

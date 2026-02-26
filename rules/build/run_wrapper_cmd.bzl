@@ -26,12 +26,18 @@ def generate_run_wrapper_script(name, bin_target, testonly=False):
 runner_paths='$(rootpaths {runner_target})'
 runner_path=$${{runner_paths##* }}
 
-# If there are multiple paths (contains space) we need to select the common directory for them:
-#   wasm_cc_binary generates multiple files in the same directory with different extensions.
+# If there are multiple paths (contains space):
+#   - Prefer .apk for android_binary (droid)
+#   - Else use dirname of first (wasm_cc_binary: multiple files in same directory)
 binary_paths='$(rootpaths {binary_target})'
 if [[ "$$binary_paths" == *" "* ]]; then
-    first_path=$${{binary_paths%% *}}
-    binary_path=$$(dirname "$$first_path")
+    apk_path=$$(echo "$$binary_paths" | tr ' ' '\\n' | grep '\\.apk$$' | head -1) || true
+    if [[ -n "$$apk_path" ]]; then
+        binary_path="$$apk_path"
+    else
+        first_path=$${{binary_paths%% *}}
+        binary_path=$$(dirname "$$first_path")
+    fi
 else
     # Single file: use the file itself (normal binary target, .tar when built with wasm toolchain)
     binary_path="$$binary_paths"

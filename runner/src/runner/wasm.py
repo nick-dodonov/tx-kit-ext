@@ -336,7 +336,7 @@ class WasmRunner:
         else:
             cmd = self._make_cmd_with_node(html_file, options.args)
 
-        return runner.cmd.Command(
+        return runner.cmd.RunCommand(
             cmd=cmd,
             cwd=None,
             cwd_descr=None,
