@@ -12,6 +12,7 @@ class Platform(Enum):
 
     EXEC = "exec"
     WASM = "wasm"
+    DROID = "droid"
     PYTHON = "python"
 
     def __repr__(self) -> str:

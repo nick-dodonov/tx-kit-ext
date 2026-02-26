@@ -8,6 +8,8 @@ build --build_python_zip=false # building python zip is slow and deprecated
 common:wasm --platforms=@emsdk//:platform_wasm
 # common:wasm --extra_toolchains=@bazel_tools//tools/python:autodetecting_toolchain
 
+# common:droid -- build Android targets
+common:droid --platforms=//test/droid:arm64-v8a
 
 # TODO: droid config
 # Workaround for bazel mobile-install //test/droid/app --android_platforms=//test/droid:arm64-v8a

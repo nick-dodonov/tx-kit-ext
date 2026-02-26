@@ -4,7 +4,8 @@ import sys
 
 from pathlib import Path
 
-from . import find, detect, cmd, wasm
+from . import find, detect, cmd, wasm, droid
+from . import context
 from .log import info, Fore, Style
 from .context import Platform, Options
 
@@ -58,11 +59,18 @@ def _main(options: Options) -> int:
     cmd_with_args = [str(found_file)] + options.args
     if platform == Platform.WASM:
         ctx = context.Context(
-            options=options, 
+            options=options,
             finder=finder,
             found_file=found_file,
         )
         command = wasm.WasmRunner(ctx).make_command()
+    elif platform == Platform.DROID:
+        ctx = context.Context(
+            options=options,
+            finder=finder,
+            found_file=found_file,
+        )
+        command = droid.DroidRunner(ctx).make_command()
     elif platform == Platform.EXEC:
         command = cmd.Command(cmd=cmd_with_args)
     elif platform == Platform.PYTHON:

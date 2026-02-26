@@ -58,6 +58,10 @@ def _detect_platform(file: Path) -> Platform:
             info(f"  {Style.DIM}Revealed: tar with WASM content{Style.RESET_ALL}")
             return Platform.WASM
 
+    if real_file.suffix == ".apk":
+        info(f"  {Style.DIM}Found APK extension{Style.RESET_ALL}")
+        return Platform.DROID
+
     if real_file.suffix in _wasm_exts:
         info(f"  {Style.DIM}Found WASM extension in realpath{Style.RESET_ALL}")
         return Platform.WASM
