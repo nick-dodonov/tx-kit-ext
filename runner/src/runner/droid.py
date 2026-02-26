@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 # This script is a helper to run an Android app on a connected device and capture its logs.
 #
-# DroidRunner provides make_command() returning DroidCommand for integration with the runner framework.
-# DroidCommand calls main() directly (no subprocess wrapper).
+# DroidCommand for integration with universal runner.
 #
 # Exit detection: Android process may not die on crash. We use:
-# - timeout (default 60s)
+# - timeout
 # - pidof to detect when app process exits
 # - full logcat to detect FATAL EXCEPTION
 #
@@ -44,15 +43,15 @@ from .cmd import Command
 
 
 _aapt_path = "/Users/rix/Library/Android/sdk/build-tools/36.0.0/aapt2"
-_DEFAULT_TIMEOUT = 60
+_DEFAULT_TIMEOUT = 10
 
 
 class DroidCommand(Command):
     """Command that runs droid main() directly."""
 
-    def __init__(self, apk_path: str, timeout: int = _DEFAULT_TIMEOUT):
-        self.apk_path = apk_path
-        self.timeout = timeout
+    def __init__(self, ctx):
+        self.apk_path = str(ctx.found_file)
+        self.timeout = _DEFAULT_TIMEOUT  # TODO: parse from ctx
 
     @property
     def descr(self) -> str:
@@ -60,16 +59,6 @@ class DroidCommand(Command):
 
     def scoped_execute(self, scope_prefix: str) -> int:
         return _run_droid(self.apk_path, self.timeout, scope_prefix)
-
-
-class DroidRunner:
-    """Runner for Android APK - installs and launches on connected device."""
-
-    def __init__(self, ctx):
-        self.ctx = ctx
-
-    def make_command(self) -> DroidCommand:
-        return DroidCommand(str(self.ctx.found_file))
 
 
 def _run(cmd, **kwargs):
@@ -128,7 +117,15 @@ def _run_droid(apk_path: str, timeout: int, scope_prefix: str) -> int:
 
         # App-specific logcat for output (--uid)
         logcat_app = subprocess.Popen(
-            ["adb", "logcat", f"--uid={uid}", "-T0"],
+            [
+                "adb",
+                "logcat",
+                f"--uid={uid}",
+                "-v", "color", 
+                "-v", "usec",
+                # "-v", "uid",  # too verbose, already logged by --uid
+                "-T0",
+            ],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
@@ -138,7 +135,7 @@ def _run_droid(apk_path: str, timeout: int, scope_prefix: str) -> int:
         )
         app_thread = threading.Thread(
             target=_log_process_output,
-            args=(logcat_app.stdout, "[LOGCAT] ", stop_event),
+            args=(logcat_app.stdout, f"{Style.DIM}[cat]{Style.RESET_ALL} ", stop_event),  # [cat] for short of logcat output
             daemon=True,
         )
         app_thread.start()
@@ -181,15 +178,17 @@ def _run_droid(apk_path: str, timeout: int, scope_prefix: str) -> int:
                     text=True,
                 )
                 if pid_result.returncode == 0 and pid_result.stdout.strip():
-                    trace(f"App started: pid={pid_result.stdout.strip()}")
+                    trace(f"pidof: polling started: pid={pid_result.stdout.strip()}")
                     break
                 time.sleep(0.5)
 
             start = time.monotonic()
+            timeout_reached = False
             while True:
                 elapsed = time.monotonic() - start
                 if elapsed >= timeout:
-                    info(f"Timeout ({timeout}s) reached")
+                    error(f"Timeout reached: {timeout}s")
+                    timeout_reached = True
                     break
                 if fatal_exception.is_set():
                     error("FATAL EXCEPTION detected")
@@ -200,7 +199,7 @@ def _run_droid(apk_path: str, timeout: int, scope_prefix: str) -> int:
                     capture_output=True,
                     text=True,
                 )
-                trace(f'PIDOF: {pid_result.returncode} "{pid_result.stdout.strip()}"')
+                # trace(f'pidof: polling tick: {pid_result.returncode} "{pid_result.stdout.strip()}"')
                 if pid_result.returncode or not pid_result.stdout.strip():
                     info(f"App process exited")
                     app_exited.set()
@@ -214,7 +213,7 @@ def _run_droid(apk_path: str, timeout: int, scope_prefix: str) -> int:
 
         Command._log_delimiter('<', Fore.LIGHTBLUE_EX)
         finish_prefix = f"{Fore.CYAN}⬅️  {scope_prefix}{Style.RESET_ALL}"
-        exit_code = 1 if fatal_exception.is_set() else 0
+        exit_code = 1 if (fatal_exception.is_set() or timeout_reached) else 0
         if exit_code == 0:
             info(f"{finish_prefix} {Fore.GREEN}✅ Success: {exit_code}{Style.RESET_ALL}")
         else:

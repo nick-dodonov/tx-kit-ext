@@ -70,7 +70,7 @@ def _main(options: Options) -> int:
             finder=finder,
             found_file=found_file,
         )
-        command = droid.DroidRunner(ctx).make_command()
+        command = droid.DroidCommand(ctx)
     elif platform == Platform.EXEC:
         command = cmd.RunCommand(cmd=cmd_with_args)
     elif platform == Platform.PYTHON:

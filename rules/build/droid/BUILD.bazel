@@ -4,10 +4,14 @@ exports_files([
     "AndroidManifest.xml.template",
 ])
 
-# Bridge library: compiles in this package so native_app_glue include works.
+# Bridge library: android_main() -> main(0, nullptr) for reusing code with main() entry point.
 cc_library(
     name = "droid_main",
-    srcs = ["droid_main.cc"],
+    srcs = [
+        "android_main.cc",
+        "redirect_stdout.cc",
+    ],
+    hdrs = ["redirect_stdout.h"],
     deps = ["@androidndk//:native_app_glue"],
     visibility = ["//visibility:public"],
 )
