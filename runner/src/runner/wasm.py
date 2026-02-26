@@ -41,7 +41,7 @@ def _parse_env_file(env_file: Path) -> list[str]:
     try:
         with open(env_file, 'r') as f:
             content = f.read()
-            trace(f"  content: {content.strip()}")
+            trace(f"content: {content.strip()}")
 
             # Parse WASM_RUNNER_ARGS variable
             args = []
@@ -137,9 +137,9 @@ Examples:
     # Use parse_known_intermixed_args() instead of parse_args() allowing to use --emrun after positional (file) args
     #   and also to ignore unknown args (passed to the WASM program)
     parsed_args, unknown_args = parser.parse_known_intermixed_args(args)
-    trace(f"  parsed: {parsed_args}")
+    trace(f"parsed: {parsed_args}")
     if unknown_args:
-        trace(f"  unknown: {unknown_args}")
+        trace(f"unknown: {unknown_args}")
 
     # Read .env file for WASM_RUNNER_ARGS variable and parse additional args from it
     env_args = _read_env_file(ctx)
@@ -147,9 +147,9 @@ Examples:
         # Parse env args with a dummy file argument to satisfy the parser
         # Command line args will override .env args
         env_parsed, env_unknown = parser.parse_known_intermixed_args(['dummy_file'] + env_args)
-        trace(f"  env parsed: {env_parsed}")
+        trace(f"env parsed: {env_parsed}")
         if env_unknown:
-            trace(f"  env unknown: {env_unknown}")
+            trace(f"env unknown: {env_unknown}")
 
         # Merge: command line args override .env args (only if not already set from command line)
         for key, value in vars(env_parsed).items():
@@ -158,9 +158,9 @@ Examples:
 
         # Add env unknown args to the beginning (so they can be overridden by command line unknown args)
         unknown_args = env_unknown + unknown_args
-        trace(f"  merged parsed: {parsed_args}")
+        trace(f"merged parsed: {parsed_args}")
         if unknown_args:
-            trace(f"  merged unknown: {unknown_args}")
+            trace(f"merged unknown: {unknown_args}")
 
     # If nokill is enabled, automatically enable emrun and show
     # If show is enabled, automatically enable emrun
@@ -184,7 +184,7 @@ Examples:
         emrun=emrun,
         args=unknown_args
     )
-    trace(f"  {options}")
+    trace(f"options: {options}")
 
     return options
 
@@ -264,16 +264,16 @@ class WasmRunner:
     def _make_cmd_with_node(self, html_file: Path, args: list[str]) -> list[str]:
         """Run WASM using Node.js (console mode)."""
         _log_important(f"🚀 WASM Console mode (via node)")
-        trace(f"  cwd: {os.getcwd()}")
-        trace(f"  html: {html_file}")
+        trace(f"cwd: {os.getcwd()}")
+        trace(f"html: {html_file}")
 
         js_file = html_file.with_suffix('.js')
         if not js_file.exists():
             raise FileNotFoundError(f"JavaScript file not found: {js_file}")
 
-        trace(f"  js: {js_file}")
+        trace(f"js: {js_file}")
         if args:
-            trace(f"  args: {' '.join(args)}")
+            trace(f"args: {' '.join(args)}")
 
         cmd = ['node', str(js_file)] + args
         return cmd
@@ -281,10 +281,10 @@ class WasmRunner:
     def _make_cmd_with_emrun(self, html_file: Path, args: list[str], emrun: EmrunOptions) -> list[str]:
         """Run WASM using emrun (browser mode)."""
         _log_important(f"🚀 WASM Browser mode (via emrun)")
-        trace(f"  cwd: {os.getcwd()}")
-        trace(f"  html: {html_file}")
+        trace(f"cwd: {os.getcwd()}")
+        trace(f"html: {html_file}")
         if args:
-            trace(f"  args: {' '.join(args)}")
+            trace(f"args: {' '.join(args)}")
 
         # https://emscripten.org/docs/compiling/Running-html-files-with-emrun.html#controlling-log-output
         cmd = [

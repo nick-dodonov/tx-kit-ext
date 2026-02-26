@@ -1,13 +1,14 @@
 """Build rule for creating multi-platform binaries based on the same source and available in the same execution environment."""
 
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+
 load("@emsdk//emscripten_toolchain:wasm_rules.bzl", "wasm_cc_binary")
+
 load(":run_wrapper_cmd.bzl", "make_run_wrapper_cmd")
 load(":tx_common.bzl", "tx_cc")
 
 
 def _multi_binary_impl(name, visibility, **kwargs):
-    #print(kwargs)
     kwargs["copts"] = tx_cc.get_copts(kwargs.pop("copts", []))
     kwargs["cxxopts"] = tx_cc.get_cxxopts(kwargs.pop("cxxopts", []))
     kwargs["linkopts"] = tx_cc.get_linkopts(kwargs.pop("linkopts", []))

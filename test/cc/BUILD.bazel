@@ -1,13 +1,25 @@
 load("//rules/build:multi_binary.bzl", "multi_binary")
+load("//rules/build:multi_library.bzl", "multi_library")
 
-multi_binary(
-    name = "cc",
-    srcs = ["cc_src.cpp"],
-    features = ["exit_runtime", "use_pthreads"],
+multi_library(
+    name = "lib",
+    srcs = ["cc_lib.cpp"],
+    hdrs = ["cc_lib.h"],
+    visibility = ["//visibility:private"],
 )
 
-load("@rules_cc//cc:cc_library.bzl", "cc_library")
-cc_library(
-    name = "lib",
-    srcs = ["cc_src.cpp"],
+multi_binary(
+    name = "bin",
+    srcs = ["cc_bin.cpp"],
+    features = [
+        # WASM toolchain features
+        "exit_runtime",
+        "use_pthreads",
+    ],
+    deps = [":lib"],
+)
+
+alias(
+    name = "cc",
+    actual = ":bin",
 )
