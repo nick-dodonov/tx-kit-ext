@@ -23,9 +23,23 @@ if sys.platform == "win32":
         pass
 
 
+def trace(*args: Any, **kwargs: Any) -> None:
+    """Trace with automatic flush."""
+    print(Style.DIM, end="")
+    print(*args, **kwargs)
+    print(Style.RESET_ALL, end="", flush=True)
+
+
 def info(*args: Any, **kwargs: Any) -> None:
     """Info with automatic flush."""
     print(*args, **kwargs, flush=True)
+
+
+def warning(*args: Any, **kwargs: Any) -> None:
+    """Warning with automatic flush."""
+    print(Fore.YELLOW, end="")
+    print(*args, **kwargs)
+    print(Style.RESET_ALL, end="", flush=True)
 
 
 def error(*args: Any, **kwargs: Any) -> None:
@@ -34,10 +48,4 @@ def error(*args: Any, **kwargs: Any) -> None:
     print(*args, **kwargs)
     print(Style.RESET_ALL, end="", flush=True)
 
-
-def trace(*args: Any, **kwargs: Any) -> None:
-    """Trace with automatic flush."""
-    print(Style.DIM, end="")
-    print(*args, **kwargs)
-    print(Style.RESET_ALL, end="", flush=True)
 

@@ -43,7 +43,7 @@ from .cmd import Command
 
 
 _aapt_path = "/Users/rix/Library/Android/sdk/build-tools/36.0.0/aapt2"
-_DEFAULT_TIMEOUT = 10
+_DEFAULT_TIMEOUT = 5
 
 
 class DroidCommand(Command):
@@ -62,7 +62,11 @@ class DroidCommand(Command):
 
 
 def _run(cmd, **kwargs):
-    trace(f"_run: {shlex.join(cmd)}")
+    if isinstance(cmd, list):
+        cmd_str = shlex.join(cmd)
+    else:
+        cmd_str = str(cmd)
+    trace(f"[run] {cmd_str}")
     return subprocess.run(cmd, **kwargs)
 
 
@@ -77,6 +81,7 @@ def _log_process_output(pipe: IO[str], prefix: str, stop_event: threading.Event 
 
 def _run_droid(apk_path: str, timeout: int, scope_prefix: str) -> int:
     """Run APK on device. Returns 0 on success, 1 on error."""
+    Command._log_delimiter_header(scope_prefix)
     try:
         result = _run([_aapt_path, "dump", "packagename", apk_path], check=True, capture_output=True, text=True)
         package_name = result.stdout.strip()
@@ -157,9 +162,8 @@ def _run_droid(apk_path: str, timeout: int, scope_prefix: str) -> int:
         )
         fatal_thread.start()
 
-        info(f"{Fore.CYAN}➡️  {scope_prefix}{Style.RESET_ALL}")
-        info(f"  {Style.DIM}adb install + monkey {Path(apk_path).name} (timeout={timeout}s){Style.RESET_ALL}")
-        Command._log_delimiter('>', Fore.LIGHTBLUE_EX)
+        trace(f"[run] # adb install + monkey {Path(apk_path).name} (timeout={timeout}s)")
+        Command._log_delimiter_start()
 
         try:
             _run(
@@ -211,14 +215,8 @@ def _run_droid(apk_path: str, timeout: int, scope_prefix: str) -> int:
             app_thread.join(timeout=2)
             fatal_thread.join(timeout=2)
 
-        Command._log_delimiter('<', Fore.LIGHTBLUE_EX)
-        finish_prefix = f"{Fore.CYAN}⬅️  {scope_prefix}{Style.RESET_ALL}"
         exit_code = 1 if (fatal_exception.is_set() or timeout_reached) else 0
-        if exit_code == 0:
-            info(f"{finish_prefix} {Fore.GREEN}✅ Success: {exit_code}{Style.RESET_ALL}")
-        else:
-            info(f"{finish_prefix} {Fore.RED}❌ Error: {exit_code}{Style.RESET_ALL}")
-
+        Command._log_delimiter_finish(scope_prefix, exit_code)
         return exit_code
     except Exception as e:
         error(f"Error: {e}")

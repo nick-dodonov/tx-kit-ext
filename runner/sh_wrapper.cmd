@@ -76,7 +76,7 @@ echo "## Execute: $@"
 # exec "$@"
 "$@"
 _ERR=$?
-echo "## [$_basename] Errorcode: $_ERR"
+echo "## [$_basename] Exitcode: $_ERR"
 exit $_ERR
 }
 
@@ -188,5 +188,5 @@ set "FULL_ARGS=!FULL_ARGS:/=\!"
 echo !_RESET!## Execute: !FULL_ARGS!
 cmd /c !FULL_ARGS!
 set _ERR=!ERRORLEVEL!
-echo ## [%_basename%] Errorcode: !_ERR!
+echo ## [%_basename%] Exitcode: !_ERR!
 exit /b !_ERR!

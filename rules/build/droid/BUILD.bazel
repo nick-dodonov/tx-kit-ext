@@ -4,14 +4,11 @@ exports_files([
     "AndroidManifest.xml.template",
 ])
 
-# Bridge library: android_main() -> main(0, nullptr) for reusing code with main() entry point.
+# Bridge library: android_main() -> main() for reusing default entry point.
 cc_library(
     name = "droid_main",
-    srcs = [
-        "android_main.cc",
-        "redirect_stdout.cc",
-    ],
-    hdrs = ["redirect_stdout.h"],
+    srcs = glob(["src/cpp/**/*.cc"]),
+    hdrs = glob(["src/cpp/**/*.h"]),
     deps = ["@androidndk//:native_app_glue"],
     visibility = ["//visibility:public"],
 )
