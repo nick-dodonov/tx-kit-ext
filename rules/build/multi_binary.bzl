@@ -9,14 +9,8 @@ load("@emsdk//emscripten_toolchain:wasm_rules.bzl", "wasm_cc_binary")
 load(":run_wrapper_cmd.bzl", "make_run_wrapper_cmd")
 load(":tx_common.bzl", "tx_cc")
 
-_DROID_MAIN_LIB = "//rules/build/droid:droid_main"
+_DROID_GLUE_LIB = "//rules/build/droid:droid_native"
 _DROID_MANIFEST_TEMPLATE = "//rules/build/droid:AndroidManifest.xml.template"
-_DEFAULT_DROID_DEPS = ["@androidndk//:native_app_glue"]
-_DEFAULT_DROID_LINKOPTS = [
-    "-llog",
-    "-landroid",
-    "-Wl,--undefined=ANativeActivity_onCreate",
-]
 
 # cc_binary-only attributes to exclude when creating cc_library for droid
 _CC_BINARY_ONLY_ATTRS = [
@@ -39,8 +33,6 @@ def _multi_binary_impl(name, visibility, **kwargs):
     if kwargs.pop("target_compatible_with", None) != None:
         fail("multi_binary does not support target_compatible_with attribute")
 
-    droid_linkopts = kwargs.pop("droid_linkopts", None)
-    droid_deps = kwargs.pop("droid_deps", None)
     droid_manifest = kwargs.pop("droid_manifest", None)
 
     kwargs["copts"] = tx_cc.get_copts(kwargs.pop("copts", []))
@@ -87,20 +79,12 @@ def _multi_binary_impl(name, visibility, **kwargs):
 
     # Droid (Android) specific targets including runner wrapper
     droid_name = "{}-droid".format(name)
-    droid_deps_final = droid_deps if droid_deps else _DEFAULT_DROID_DEPS
-    # Use explicit list; droid_linkopts from inherit_attrs can be select() that resolves empty for android
-    droid_linkopts_final = droid_linkopts if droid_linkopts else _DEFAULT_DROID_LINKOPTS
 
-    _droid_exclude = _CC_BINARY_ONLY_ATTRS + ["linkopts", "main"]
-    droid_lib_kwargs = {k: v for k, v in kwargs.items() if k not in _droid_exclude}
-    droid_lib_kwargs["srcs"] = kwargs.get("srcs", [])
-    droid_lib_kwargs["deps"] = kwargs.get("deps", []) + droid_deps_final + [_DROID_MAIN_LIB]
-
+    droid_lib_kwargs = {k: v for k, v in kwargs.items() if k not in _CC_BINARY_ONLY_ATTRS}
     cc_library(
         name = "{}.lib".format(droid_name),
         visibility = visibility,
         target_compatible_with = ["@platforms//os:android"],
-        linkopts = _DEFAULT_DROID_LINKOPTS,
         **droid_lib_kwargs,
     )
 
@@ -123,7 +107,10 @@ def _multi_binary_impl(name, visibility, **kwargs):
     android_binary(
         name = droid_apk_name,
         manifest = manifest_src,
-        deps = [":{}.lib".format(droid_name)],
+        deps = [
+            ":{}.lib".format(droid_name),
+            _DROID_GLUE_LIB,
+        ],
         visibility = visibility,
     )
 
@@ -156,8 +143,6 @@ multi_binary = macro(
     inherit_attrs = native.cc_binary,
     implementation = _multi_binary_impl,
     attrs = {
-        "droid_linkopts": attr.string_list(default = []),
-        "droid_deps": attr.label_list(default = []),
         "droid_manifest": attr.label(default = None),
     },
 )
