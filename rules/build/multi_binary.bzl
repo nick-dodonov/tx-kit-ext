@@ -9,6 +9,7 @@ load("@emsdk//emscripten_toolchain:wasm_rules.bzl", "wasm_cc_binary")
 load(":run_wrapper_cmd.bzl", "make_run_wrapper_cmd")
 load(":tx_common.bzl", "tx_cc")
 
+_DROID_GLUE_JAVA_SRC = "//rules/build/droid:src/java/tx/DroidActivity.java"
 _DROID_GLUE_LIB = "//rules/build/droid:droid_native"
 _DROID_MANIFEST_TEMPLATE = "//rules/build/droid:AndroidManifest.xml.template"
 
@@ -112,6 +113,7 @@ def _multi_binary_impl(name, visibility, **kwargs):
     android_binary(
         name = droid_apk_name,
         manifest = manifest_src,
+        srcs = [_DROID_GLUE_JAVA_SRC],
         deps = [
             ":{}.lib".format(droid_name),
             _DROID_GLUE_LIB,
