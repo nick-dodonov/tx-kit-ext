@@ -11,11 +11,6 @@ multi_library(
 multi_binary(
     name = "bin",
     srcs = ["cc_bin.cpp"],
-    features = [
-        # WASM toolchain features
-        "exit_runtime",
-        "use_pthreads",
-    ],
     deps = [":lib"],
 )
 

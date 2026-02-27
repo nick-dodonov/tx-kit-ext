@@ -52,11 +52,16 @@ def _multi_binary_impl(name, visibility, **kwargs):
     )
 
     # WASM specific targets including runner wrapper
+    wasm_kwargs = {k: v for k, v in kwargs.items()}
+    wasm_kwargs["features"] = [  # toolchain features
+        "exit_runtime",  # runner wrapper needs to exit runtime
+        "use_pthreads",  # threading support w/ boost
+    ]
     cc_binary(
         name = "{}-wasm.tar".format(name),
         visibility = visibility,
         target_compatible_with = ["@platforms//cpu:wasm32"],
-        **kwargs,
+        **wasm_kwargs,
     )
 
     wasm_cc_binary(
