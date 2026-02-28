@@ -55,16 +55,19 @@ def _main(options: Options) -> int:
             finder=finder,
             found_file=found_file,
         )
-        command = droid.DroidCommand(ctx)
+        command = droid.DroidCommand(ctx.found_file)
     elif platform == Platform.EXEC:
-        command = cmd.RunCommand(cmd=[str(found_file)] + options.args)
+        command = cmd.RunCommand(
+            scope_prefix=f"[EXEC: {found_file.name}]",
+            cmd=[str(found_file)] + options.args)
     elif platform == Platform.PYTHON:
-        command = cmd.RunCommand(cmd=["python3"] + [str(found_file)] + options.args)
+        command = cmd.RunCommand(
+            scope_prefix=f"[PYTHON: {found_file.name}]",
+            cmd=["python3", str(found_file)] + options.args)
     else:
         raise ValueError(f"Unsupported platform: {platform}")
 
-    descr = command.descr
-    return command.scoped_execute(f"[{platform.value.upper()}: {descr}]")
+    return command.scoped_execute()
 
 
 def start(options: Options) -> None:

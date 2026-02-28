@@ -38,8 +38,8 @@ import threading
 import time
 from pathlib import Path
 from typing import IO
+from colorama import Style
 
-from .log import Fore, Style
 from .cmd import Command
 
 log = logging.getLogger(__name__)
@@ -47,21 +47,6 @@ log = logging.getLogger(__name__)
 
 _aapt_path = "/Users/rix/Library/Android/sdk/build-tools/36.0.0/aapt2"
 _DEFAULT_TIMEOUT = 5
-
-
-class DroidCommand(Command):
-    """Command that runs droid main() directly."""
-
-    def __init__(self, ctx):
-        self.apk_path = str(ctx.found_file)
-        self.timeout = _DEFAULT_TIMEOUT  # TODO: parse from ctx
-
-    @property
-    def descr(self) -> str:
-        return Path(self.apk_path).name
-
-    def scoped_execute(self, scope_prefix: str) -> int:
-        return _run_droid(self.apk_path, self.timeout, scope_prefix)
 
 
 def _run(cmd, **kwargs):
@@ -73,7 +58,7 @@ def _run(cmd, **kwargs):
     return subprocess.run(cmd, **kwargs)
 
 
-def _log_process_output(pipe: IO[str], prefix: str, stop_event: threading.Event | None = None) -> None:
+def _target_logcat_handler(pipe: IO[str], prefix: str, stop_event: threading.Event | None = None) -> None:
     for line in iter(pipe.readline, ""):
         if stop_event and stop_event.is_set():
             break
@@ -82,10 +67,16 @@ def _log_process_output(pipe: IO[str], prefix: str, stop_event: threading.Event 
     pipe.close()
 
 
-def _run_droid(apk_path: str, timeout: int, scope_prefix: str) -> int:
-    """Run APK on device. Returns 0 on success, 1 on error."""
-    Command._log_delimiter_header(scope_prefix)
-    try:
+class DroidCommand(Command):
+    """Command that runs droid main() directly."""
+
+    def __init__(self, apk_path: Path, timeout: int = _DEFAULT_TIMEOUT):
+        Command.__init__(self, f"[DROID: {apk_path.name}]")
+        self.apk_path = apk_path
+        self.timeout = timeout
+
+    def execute(self) -> int:
+        apk_path = str(self.apk_path)
         result = _run([_aapt_path, "dump", "packagename", apk_path], check=True, capture_output=True, text=True)
         package_name = result.stdout.strip()
         log.debug(f"package: {package_name}")
@@ -111,7 +102,7 @@ def _run_droid(apk_path: str, timeout: int, scope_prefix: str) -> int:
         app_exited = threading.Event()
         stop_event = threading.Event()
 
-        def _logcat_fatal_reader(pipe: IO[str]) -> None:
+        def _system_logcat_handler(pipe: IO[str]) -> None:
             """Read full logcat, detect FATAL EXCEPTION."""
             fatal_re = re.compile(r"FATAL EXCEPTION:", re.IGNORECASE)
             for line in iter(pipe.readline, ""):
@@ -142,7 +133,7 @@ def _run_droid(apk_path: str, timeout: int, scope_prefix: str) -> int:
             bufsize=1,
         )
         app_thread = threading.Thread(
-            target=_log_process_output,
+            target=_target_logcat_handler,
             args=(logcat_app.stdout, f"{Style.DIM}[cat]{Style.RESET_ALL} ", stop_event),  # [cat] for short of logcat output
             daemon=True,
         )
@@ -159,12 +150,13 @@ def _run_droid(apk_path: str, timeout: int, scope_prefix: str) -> int:
             bufsize=1,
         )
         fatal_thread = threading.Thread(
-            target=_logcat_fatal_reader,
+            target=_system_logcat_handler,
             args=(logcat_fatal.stdout,),
             daemon=True,
         )
         fatal_thread.start()
 
+        timeout = self.timeout
         log.debug(f"[run] # adb install + monkey {Path(apk_path).name} (timeout={timeout}s)")
         Command._log_delimiter_start()
 
@@ -209,11 +201,7 @@ def _run_droid(apk_path: str, timeout: int, scope_prefix: str) -> int:
             fatal_thread.join(timeout=2)
 
         exit_code = 1 if (fatal_exception.is_set() or timeout_reached) else 0
-        Command._log_delimiter_finish(scope_prefix, exit_code)
         return exit_code
-    except Exception as e:
-        log.error(f"Error: {e}")
-        return 1
 
 
 def main(args):
@@ -234,7 +222,10 @@ def main(args):
     parsed_args, _ = parser.parse_known_intermixed_args(args)
     log.debug(f"Droid: {parsed_args}")
 
-    return _run_droid(parsed_args.file, parsed_args.timeout, "[DROID]")
+    return DroidCommand(
+        Path(parsed_args.file), 
+        parsed_args.timeout
+    ).scoped_execute("[DROID]")
 
 
 if __name__ == "__main__":

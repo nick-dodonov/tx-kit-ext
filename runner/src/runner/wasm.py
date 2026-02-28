@@ -192,17 +192,13 @@ Examples:
     return options
 
 
-def _log_important(msg: str) -> None:
-    log.info(f"{Fore.MAGENTA}{msg}{Style.RESET_ALL}")
-
-
 class WasmRunner:
     """Main WASM runner class."""
 
     def __init__(self, ctx: Context):
         args = [str(ctx.found_file.resolve())] + ctx.options.args
 
-        _log_important(f"{Style.BRIGHT}⚙️  WASM Runner {Style.DIM}{args}")
+        log.info(f"{Fore.CYAN}⚙️  WASM Runner {Style.DIM}{args}")
         self.options = _parse_arguments(ctx, args)
 
     def _extract_from_tar_if_needed(self, base_path: Path) -> Path | None:
@@ -269,7 +265,7 @@ class WasmRunner:
 
     def _make_cmd_with_node(self, html_file: Path, args: list[str]) -> list[str]:
         """Run WASM using Node.js (console mode)."""
-        _log_important(f"🚀 WASM Console mode (via node)")
+        log.info(f"🚀 WASM Node.js mode")
         log.debug(f"cwd: {os.getcwd()}")
         log.debug(f"html: {html_file}")
 
@@ -281,12 +277,11 @@ class WasmRunner:
         if args:
             log.debug(f"args: {' '.join(args)}")
 
-        cmd = ['node', str(js_file)] + args
-        return cmd
+        return ['node', str(js_file)] + args
 
     def _make_cmd_with_emrun(self, html_file: Path, args: list[str], emrun: EmrunOptions) -> list[str]:
         """Run WASM using emrun (browser mode)."""
-        _log_important(f"🚀 WASM Browser mode (via emrun)")
+        log.info(f"🚀 WASM Browser mode (via emrun)")
         log.debug(f"cwd: {os.getcwd()}")
         log.debug(f"html: {html_file}")
         if args:
@@ -340,7 +335,6 @@ class WasmRunner:
             cmd = self._make_cmd_with_node(html_file, options.args)
 
         return runner.cmd.RunCommand(
+            scope_prefix=f"[WASM: {cmd[0]}: {html_file.name}]",
             cmd=cmd,
-            cwd=None,
-            cwd_descr=None,
         )

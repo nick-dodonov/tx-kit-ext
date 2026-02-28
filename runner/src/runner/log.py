@@ -33,6 +33,13 @@ class LogFormatter(logging.Formatter):
         logging.ERROR: "E",
         logging.CRITICAL: "C",
     }
+    LEVEL_NORMAL = {
+        logging.DEBUG: "[DEBUG] ",
+        logging.INFO: "",
+        logging.WARNING: "[WARNING] ",
+        logging.ERROR: "[ERROR] ",
+        logging.CRITICAL: "[CRITICAL] ",
+    }
     LEVEL_COLORS = {
         logging.DEBUG: Style.DIM,
         logging.INFO: "",
@@ -41,8 +48,9 @@ class LogFormatter(logging.Formatter):
         logging.CRITICAL: Fore.RED + Style.BRIGHT,
     }
 
-    def __init__(self, *args: Any, isatty: bool = False, **kwargs: Any) -> None:
+    def __init__(self, *args: Any, verbose: bool = False, isatty: bool = False, **kwargs: Any) -> None:
         self._isatty = isatty
+        self._level_map = self.LEVEL_ABBREV if verbose else self.LEVEL_NORMAL
         super().__init__(*args, **kwargs)
 
     def formatTime(self, record: logging.LogRecord, datefmt: str | None = None) -> str:
@@ -53,7 +61,7 @@ class LogFormatter(logging.Formatter):
         return super().formatTime(record, datefmt)
 
     def format(self, record: logging.LogRecord) -> str:
-        record.levelname = self.LEVEL_ABBREV.get(record.levelno, record.levelname[0])
+        record.levelname = self._level_map.get(record.levelno, record.levelname[0])
         s = super().format(record)
         if self._isatty:
             color = self.LEVEL_COLORS.get(record.levelno, "")
@@ -63,39 +71,19 @@ class LogFormatter(logging.Formatter):
 
 def setup_logging(verbose: bool = False, show_time: bool = False) -> None:
     level = logging.DEBUG if verbose else logging.INFO
-    handler = logging.StreamHandler()
+    isatty = sys.stdout.isatty()
     if show_time:
         fmt = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
-        handler.setFormatter(LogFormatter(fmt, datefmt="%H:%M:%S", isatty=handler.stream.isatty()))
-    else:
+    elif verbose:
         fmt = "%(levelname)s [%(name)s] %(message)s"
-        handler.setFormatter(LogFormatter(fmt, isatty=handler.stream.isatty()))
+    else:
+        fmt = "%(levelname)s%(message)s"
+
+    handler = logging.StreamHandler()
+    handler.setFormatter(LogFormatter(
+        fmt,
+        datefmt="%H:%M:%S" if show_time else None,
+        verbose=verbose,
+        isatty=isatty,
+    ))
     logging.basicConfig(level=level, handlers=[handler])
-
-
-def trace(*args: Any, **kwargs: Any) -> None:
-    """Trace with automatic flush."""
-    print(Style.DIM, end="")
-    print(*args, **kwargs)
-    print(Style.RESET_ALL, end="", flush=True)
-
-
-def info(*args: Any, **kwargs: Any) -> None:
-    """Info with automatic flush."""
-    print(*args, **kwargs, flush=True)
-
-
-def warning(*args: Any, **kwargs: Any) -> None:
-    """Warning with automatic flush."""
-    print(Fore.YELLOW, end="")
-    print(*args, **kwargs)
-    print(Style.RESET_ALL, end="", flush=True)
-
-
-def error(*args: Any, **kwargs: Any) -> None:
-    """Error with automatic flush."""
-    print(Fore.RED, end="")
-    print(*args, **kwargs)
-    print(Style.RESET_ALL, end="", flush=True)
-
-
