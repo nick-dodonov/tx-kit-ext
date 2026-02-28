@@ -11,7 +11,10 @@ cc_library(
     name = "droid_native",
     srcs = glob(["src/cpp/**/*.cc"]),
     hdrs = glob(["src/cpp/**/*.h"]),
-    deps = ["@androidndk//:native_app_glue"],
+    deps = [
+        # DISABLED: in favor of self-implemented droid_glue.cc (TODO: remove when everything useful in native_app_glue will be known)
+        # "@androidndk//:native_app_glue"
+    ],
     linkopts = [
         "-llog",
         "-landroid",

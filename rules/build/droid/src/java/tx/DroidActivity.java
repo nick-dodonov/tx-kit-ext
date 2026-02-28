@@ -1,5 +1,6 @@
 package tx;
 
+import android.app.Activity;
 import android.app.NativeActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -17,5 +18,10 @@ public class DroidActivity extends NativeActivity {
     protected void onDestroy() {
         Log.d(TAG, "onDestroy");
         super.onDestroy();
+        System.exit(0);
+    }
+
+    public static void finishOnUiThread(Activity activity) {
+        activity.runOnUiThread(activity::finish);
     }
 }

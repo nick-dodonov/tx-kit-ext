@@ -101,4 +101,8 @@ void redirect_stdout_to_logcat(void) {
   // 2. streambuf: std::cout / std::cerr -> logcat (writes to fd 1/2 otherwise)
   std::cout.rdbuf(&s_cout_buf);
   std::cerr.rdbuf(&s_cerr_buf);
+
+  // // 3. print some test messages
+  // printf("Hello from printf\n");
+  // std::cout << "Hello from std::cout" << std::endl;
 }

@@ -22,7 +22,7 @@
 # Obtain uid of the installed app:
 #   adb shell pm list package -U com.app | sed 's/.*uid://'
 # Start reading logs for the app (without history):
-#   adb logcat --uid=$UID -T0
+#   adb logcat --uid=$UID -T1
 # Start the app:
 #   adb shell monkey -p com.app -c android.intent.category.LAUNCHER 1
 # Listen until the app is launched and then stop reading logs:
@@ -129,7 +129,7 @@ def _run_droid(apk_path: str, timeout: int, scope_prefix: str) -> int:
                 "-v", "color", 
                 "-v", "usec",
                 # "-v", "uid",  # too verbose, already logged by --uid
-                "-T0",
+                "-T1",
             ],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
@@ -147,7 +147,7 @@ def _run_droid(apk_path: str, timeout: int, scope_prefix: str) -> int:
 
         # Full logcat for FATAL EXCEPTION detection (AndroidRuntime tag is key for crashes)
         logcat_fatal = subprocess.Popen(
-            ["adb", "logcat", "AndroidRuntime:E", "-T0"],
+            ["adb", "logcat", "AndroidRuntime:E", "-T1"],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
@@ -172,41 +172,31 @@ def _run_droid(apk_path: str, timeout: int, scope_prefix: str) -> int:
             )
 
             # Wait for app to start (pidof returns pid)
-            start_wait = time.monotonic()
-            while time.monotonic() - start_wait < 10:
-                if fatal_exception.is_set():
-                    break
-                pid_result = subprocess.run(
-                    ["adb", "shell", "pidof", "-s", package_name],
-                    capture_output=True,
-                    text=True,
-                )
-                if pid_result.returncode == 0 and pid_result.stdout.strip():
-                    trace(f"pidof: polling started: pid={pid_result.stdout.strip()}")
-                    break
-                time.sleep(0.5)
+            time.sleep(0.5)  # TODO: wait event in logcat
 
             start = time.monotonic()
             timeout_reached = False
             while True:
-                elapsed = time.monotonic() - start
-                if elapsed >= timeout:
-                    error(f"Timeout reached: {timeout}s")
-                    timeout_reached = True
-                    break
-                if fatal_exception.is_set():
-                    error("FATAL EXCEPTION detected")
-                    break
-                time.sleep(1)
                 pid_result = subprocess.run(
                     ["adb", "shell", "pidof", "-s", package_name],
                     capture_output=True,
                     text=True,
                 )
-                # trace(f'pidof: polling tick: {pid_result.returncode} "{pid_result.stdout.strip()}"')
+
+                if fatal_exception.is_set():
+                    error("FATAL EXCEPTION detected")
+                    break
+
                 if pid_result.returncode or not pid_result.stdout.strip():
-                    info(f"App process exited")
+                    trace(f'pidof: polling stopped: {pid_result.returncode} "{pid_result.stdout.strip()}"')
                     app_exited.set()
+                    break
+                trace(f'pidof: polling tick: {pid_result.returncode} "{pid_result.stdout.strip()}"')
+
+                elapsed = time.monotonic() - start
+                if elapsed >= timeout:
+                    error(f"Timeout reached: {timeout}s")
+                    timeout_reached = True
                     break
         finally:
             stop_event.set()
