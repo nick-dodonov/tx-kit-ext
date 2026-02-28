@@ -28,18 +28,21 @@
 # Listen until the app is launched and then stop reading logs:
 #   adb shell pidof -s com.app
 
-import sys
-import shlex
 import argparse
+import logging
+import re
+import shlex
 import subprocess
+import sys
 import threading
 import time
-import re
 from pathlib import Path
 from typing import IO
 
-from .log import info, trace, error, Fore, Style
+from .log import Fore, Style
 from .cmd import Command
+
+log = logging.getLogger(__name__)
 
 
 _aapt_path = "/Users/rix/Library/Android/sdk/build-tools/36.0.0/aapt2"
@@ -66,7 +69,7 @@ def _run(cmd, **kwargs):
         cmd_str = shlex.join(cmd)
     else:
         cmd_str = str(cmd)
-    trace(f"[run] {cmd_str}")
+    log.debug(f"[run] {cmd_str}")
     return subprocess.run(cmd, **kwargs)
 
 
@@ -75,7 +78,7 @@ def _log_process_output(pipe: IO[str], prefix: str, stop_event: threading.Event 
         if stop_event and stop_event.is_set():
             break
         if line:
-            info(f"{prefix}{line.rstrip()}")
+            print(f"{prefix}{line.rstrip()}")
     pipe.close()
 
 
@@ -85,7 +88,7 @@ def _run_droid(apk_path: str, timeout: int, scope_prefix: str) -> int:
     try:
         result = _run([_aapt_path, "dump", "packagename", apk_path], check=True, capture_output=True, text=True)
         package_name = result.stdout.strip()
-        trace(f"package: {package_name}")
+        log.debug(f"package: {package_name}")
 
         _run(["adb", "shell", "am", "force-stop", package_name], check=True)
         _run(["adb", "install", apk_path], check=True)
@@ -98,9 +101,9 @@ def _run_droid(apk_path: str, timeout: int, scope_prefix: str) -> int:
         )
         uid_line = result.stdout.strip()
         uid = uid_line.split("uid:")[1] if "uid:" in uid_line else None
-        trace(f"uid: {uid}")
+        log.debug(f"uid: {uid}")
         if not uid:
-            error(f"Could not find UID for package {package_name}.")
+            log.error(f"Could not find UID for package {package_name}.")
             return 1
 
         # Shared state for exit detection
@@ -115,7 +118,7 @@ def _run_droid(apk_path: str, timeout: int, scope_prefix: str) -> int:
                 if stop_event.is_set():
                     break
                 if fatal_re.search(line):
-                    trace(f"[FATAL] {line.rstrip()}")
+                    log.debug(f"[FATAL] {line.rstrip()}")
                     fatal_exception.set()
                     break
             pipe.close()
@@ -162,7 +165,7 @@ def _run_droid(apk_path: str, timeout: int, scope_prefix: str) -> int:
         )
         fatal_thread.start()
 
-        trace(f"[run] # adb install + monkey {Path(apk_path).name} (timeout={timeout}s)")
+        log.debug(f"[run] # adb install + monkey {Path(apk_path).name} (timeout={timeout}s)")
         Command._log_delimiter_start()
 
         try:
@@ -184,18 +187,18 @@ def _run_droid(apk_path: str, timeout: int, scope_prefix: str) -> int:
                 )
 
                 if fatal_exception.is_set():
-                    error("FATAL EXCEPTION detected")
+                    log.error("FATAL EXCEPTION detected")
                     break
 
                 if pid_result.returncode or not pid_result.stdout.strip():
-                    trace(f'pidof: polling stopped: {pid_result.returncode} "{pid_result.stdout.strip()}"')
+                    log.debug(f'pidof: polling stopped: {pid_result.returncode} "{pid_result.stdout.strip()}"')
                     app_exited.set()
                     break
-                trace(f'pidof: polling tick: {pid_result.returncode} "{pid_result.stdout.strip()}"')
+                log.debug(f'pidof: polling tick: {pid_result.returncode} "{pid_result.stdout.strip()}"')
 
                 elapsed = time.monotonic() - start
                 if elapsed >= timeout:
-                    error(f"Timeout reached: {timeout}s")
+                    log.error(f"Timeout reached: {timeout}s")
                     timeout_reached = True
                     break
         finally:
@@ -209,7 +212,7 @@ def _run_droid(apk_path: str, timeout: int, scope_prefix: str) -> int:
         Command._log_delimiter_finish(scope_prefix, exit_code)
         return exit_code
     except Exception as e:
-        error(f"Error: {e}")
+        log.error(f"Error: {e}")
         return 1
 
 
@@ -229,7 +232,7 @@ def main(args):
         help=f"Timeout in seconds (default: {_DEFAULT_TIMEOUT})",
     )
     parsed_args, _ = parser.parse_known_intermixed_args(args)
-    trace(f"Droid: {parsed_args}")
+    log.debug(f"Droid: {parsed_args}")
 
     return _run_droid(parsed_args.file, parsed_args.timeout, "[DROID]")
 

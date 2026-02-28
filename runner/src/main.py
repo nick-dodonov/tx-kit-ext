@@ -2,6 +2,9 @@
 import argparse
 import logging
 import sys
+import os
+
+from colorama import Fore, Style
 from pathlib import Path
 
 import runner
@@ -43,9 +46,9 @@ def _parse_args() -> Options:
         show_time=parsed_args.verbose >= 2,
     )
     log.debug("parsing %s", args)
-    log.debug("  parsed %s", parsed_args)
+    log.debug("parsed %s", parsed_args)
     if remain_args:
-        log.debug("  remain %s", remain_args)
+        log.debug("remain %s", remain_args)
 
     return Options(
         platform=Platform(parsed_args.platform),
@@ -55,7 +58,7 @@ def _parse_args() -> Options:
 
 
 if __name__ == "__main__":
-    runner.log_header_once()
+    print(f"{Fore.CYAN}{Style.BRIGHT}⭐ Runner {Style.DIM}(Python {sys.version.split()[0]}, PID {os.getpid()}){Style.RESET_ALL}")
     options = _parse_args()
-    log.info("runner starting: %s", options)
+    log.debug("starting runner: %s", options)
     runner.start(options)

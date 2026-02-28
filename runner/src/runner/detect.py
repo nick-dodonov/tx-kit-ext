@@ -1,9 +1,11 @@
+import logging
 from pathlib import Path
 
 import filetype
 
-from .log import info, Style
 from .context import Platform
+
+log = logging.getLogger(__name__)
 
 _wasm_exts = (".html", ".js", ".wasm")
 
@@ -30,52 +32,46 @@ def _read_shebang(file: Path) -> str | None:
     return None
 
 
-def _detect_platform(file: Path) -> Platform:
-    # print(f"{Style.DIM}Detecting platform...{Style.RESET_ALL}")
-
+def _detect_platform(file: Path) -> tuple[Platform, str]:
     real_file = file.resolve()
     if real_file != file:
-        info(f"  {Style.DIM}Real: {real_file}{Style.RESET_ALL}")
+        log.debug("Real: %s", real_file)
 
     if real_file.is_dir():
-        info(f"  {Style.DIM}Type: <directory>{Style.RESET_ALL}")
+        log.debug("Type: <directory>")
         # TODO: check if it contains wasm files
-        return Platform.WASM
+        return Platform.WASM, "directory detected"
 
     kind = filetype.guess(real_file)
     if kind:
-        info(f"  {Style.DIM}Type: {kind.mime} ({kind.extension}){Style.RESET_ALL}")
+        log.debug("Type: %s (%s)", kind.mime, kind.extension)
 
     shebang = _read_shebang(real_file)
     if shebang:
-        info(f"  {Style.DIM}Shebang: {shebang}{Style.RESET_ALL}")
+        log.debug("Shebang: %s", shebang)
         if "python" in shebang:
-            return Platform.PYTHON
+            return Platform.PYTHON, "found Python shebang"
 
     if kind:
         if kind.extension == "tar":
             # TODO: check if it contains wasm files
-            info(f"  {Style.DIM}Revealed: tar with WASM content{Style.RESET_ALL}")
-            return Platform.WASM
+            return Platform.WASM, "revealed tar with WASM content"
 
     if real_file.suffix == ".apk":
-        info(f"  {Style.DIM}Found APK extension{Style.RESET_ALL}")
-        return Platform.DROID
+        return Platform.DROID, "found APK extension"
 
     if real_file.suffix in _wasm_exts:
-        info(f"  {Style.DIM}Found WASM extension in realpath{Style.RESET_ALL}")
-        return Platform.WASM
+        return Platform.WASM, "found WASM extension in realpath"
 
     for ext in _wasm_exts:
         if real_file.with_suffix(ext).exists():
-            info(f"  {Style.DIM}Found WASM extension in realpath+ext: {file.stem}{ext}{Style.RESET_ALL}")
-            return Platform.WASM
+            return Platform.WASM, str.format("found WASM extension in realpath+ext: %s%s", file.stem, ext)
 
-    return Platform.EXEC
+    return Platform.EXEC, "no platform detected"
 
 
 def detect_platform(file: Path) -> Platform:
-    platform = _detect_platform(file)
-    info(f"  {Style.DIM}Detected: {platform}{Style.RESET_ALL}")
+    platform, reason = _detect_platform(file)
+    log.debug("detected %s (%s)", platform, reason)
     assert platform != Platform.AUTO, "Detection should never return AUTO"
     return platform

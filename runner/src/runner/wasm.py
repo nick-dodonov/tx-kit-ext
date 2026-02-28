@@ -6,13 +6,16 @@ Supports both test mode (bazel test) and run mode (bazel run).
 """
 
 import argparse
+import logging
 import os
 from dataclasses import dataclass
 from pathlib import Path
+from colorama import Fore, Style
 
 import runner.cmd
-from .log import info, trace, error, Fore, Style
 from .context import Context
+
+log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -41,7 +44,7 @@ def _parse_env_file(env_file: Path) -> list[str]:
     try:
         with open(env_file, 'r') as f:
             content = f.read()
-            trace(f"content: {content.strip()}")
+            log.debug(f"content: {content.strip()}")
 
             # Parse WASM_RUNNER_ARGS variable
             args = []
@@ -66,7 +69,7 @@ def _parse_env_file(env_file: Path) -> list[str]:
             return args
 
     except Exception as e:
-        error(f"❌ Failed reading/parsing: {e}")
+        log.error(f"❌ Failed reading/parsing: {e}")
         return []
 
 
@@ -74,9 +77,9 @@ def _read_env_file(ctx: Context) -> list[str]:
     """Read .env file (in the same directory as the target file) and extract WASM_RUNNER_ARGS arguments."""
 
     env_path = Path(ctx.options.file).with_name('.env')
-    found_path = ctx.finder.find_file_logged(env_path)
-
+    found_path, found_in = ctx.finder.find_file(env_path)
     if found_path:
+        log.debug(f"Found: {found_path} # {found_in}")
         return _parse_env_file(found_path)
     return []
 
@@ -137,9 +140,9 @@ Examples:
     # Use parse_known_intermixed_args() instead of parse_args() allowing to use --emrun after positional (file) args
     #   and also to ignore unknown args (passed to the WASM program)
     parsed_args, unknown_args = parser.parse_known_intermixed_args(args)
-    trace(f"parsed: {parsed_args}")
+    log.debug(f"parsed: {parsed_args}")
     if unknown_args:
-        trace(f"unknown: {unknown_args}")
+        log.debug(f"unknown: {unknown_args}")
 
     # Read .env file for WASM_RUNNER_ARGS variable and parse additional args from it
     env_args = _read_env_file(ctx)
@@ -147,9 +150,9 @@ Examples:
         # Parse env args with a dummy file argument to satisfy the parser
         # Command line args will override .env args
         env_parsed, env_unknown = parser.parse_known_intermixed_args(['dummy_file'] + env_args)
-        trace(f"env parsed: {env_parsed}")
+        log.debug(f"env parsed: {env_parsed}")
         if env_unknown:
-            trace(f"env unknown: {env_unknown}")
+            log.debug(f"env unknown: {env_unknown}")
 
         # Merge: command line args override .env args (only if not already set from command line)
         for key, value in vars(env_parsed).items():
@@ -158,9 +161,9 @@ Examples:
 
         # Add env unknown args to the beginning (so they can be overridden by command line unknown args)
         unknown_args = env_unknown + unknown_args
-        trace(f"merged parsed: {parsed_args}")
+        log.debug(f"merged parsed: {parsed_args}")
         if unknown_args:
-            trace(f"merged unknown: {unknown_args}")
+            log.debug(f"merged unknown: {unknown_args}")
 
     # If nokill is enabled, automatically enable emrun and show
     # If show is enabled, automatically enable emrun
@@ -184,13 +187,13 @@ Examples:
         emrun=emrun,
         args=unknown_args
     )
-    trace(f"options: {options}")
+    log.debug(f"options: {options}")
 
     return options
 
 
 def _log_important(msg: str) -> None:
-    info(f"{Fore.MAGENTA}{msg}{Style.RESET_ALL}")
+    log.info(f"{Fore.MAGENTA}{msg}{Style.RESET_ALL}")
 
 
 class WasmRunner:
@@ -209,7 +212,7 @@ class WasmRunner:
 
         # Check it is a directory (already extracted, e.g. via wasm_cc_binary rule)
         if base_path.is_dir():
-            trace(f"Found directory: {base_path}")
+            log.debug(f"Found directory: {base_path}")
             html_files = list[Path](base_path.glob("*.html"))
             if len(html_files) == 0:
                 raise FileNotFoundError(f"No HTML file found in directory: {base_path}")
@@ -222,11 +225,11 @@ class WasmRunner:
         # Check it is a tar archive
         tar_path = base_path
         if tarfile.is_tarfile(tar_path):
-            trace(f"Found tar archive: {tar_path}")
+            log.debug(f"Found tar archive: {tar_path}")
 
             # Create temporary directory for extraction
             temp_dir = Path(tempfile.mkdtemp(prefix="wasm_runner_"))
-            trace(f"Extracting to temporary directory: {temp_dir}")
+            log.debug(f"Extracting to temporary directory: {temp_dir}")
 
             try:
                 with tarfile.open(tar_path, 'r') as tar:
@@ -241,14 +244,14 @@ class WasmRunner:
                 extracted_html = temp_dir / html_name
 
                 if extracted_html.exists():
-                    trace(f"Successfully extracted HTML file: {extracted_html}")
+                    log.debug(f"Successfully extracted HTML file: {extracted_html}")
                     return extracted_html
                 else:
-                    trace(f"HTML file not found in extracted archive: {html_name}")
+                    log.debug(f"HTML file not found in extracted archive: {html_name}")
                     return None
 
             except Exception as e:
-                trace(f"Error extracting tar archive: {e}")
+                log.debug(f"Error extracting tar archive: {e}")
                 return None
 
         return None
@@ -267,16 +270,16 @@ class WasmRunner:
     def _make_cmd_with_node(self, html_file: Path, args: list[str]) -> list[str]:
         """Run WASM using Node.js (console mode)."""
         _log_important(f"🚀 WASM Console mode (via node)")
-        trace(f"cwd: {os.getcwd()}")
-        trace(f"html: {html_file}")
+        log.debug(f"cwd: {os.getcwd()}")
+        log.debug(f"html: {html_file}")
 
         js_file = html_file.with_suffix('.js')
         if not js_file.exists():
             raise FileNotFoundError(f"JavaScript file not found: {js_file}")
 
-        trace(f"js: {js_file}")
+        log.debug(f"js: {js_file}")
         if args:
-            trace(f"args: {' '.join(args)}")
+            log.debug(f"args: {' '.join(args)}")
 
         cmd = ['node', str(js_file)] + args
         return cmd
@@ -284,10 +287,10 @@ class WasmRunner:
     def _make_cmd_with_emrun(self, html_file: Path, args: list[str], emrun: EmrunOptions) -> list[str]:
         """Run WASM using emrun (browser mode)."""
         _log_important(f"🚀 WASM Browser mode (via emrun)")
-        trace(f"cwd: {os.getcwd()}")
-        trace(f"html: {html_file}")
+        log.debug(f"cwd: {os.getcwd()}")
+        log.debug(f"html: {html_file}")
         if args:
-            trace(f"args: {' '.join(args)}")
+            log.debug(f"args: {' '.join(args)}")
 
         # https://emscripten.org/docs/compiling/Running-html-files-with-emrun.html#controlling-log-output
         cmd = [
