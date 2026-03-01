@@ -1,12 +1,7 @@
 #include "droid_argv.h"
 
-#include <jni.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include "droid_log.h"
-
-static const char* TX_ARGV_EXTRA = "tx.argv";
 
 /// Parse space-separated string into argc/argv. Always includes argv[0]="app". Caller must free.
 static void parse_argv_string(const char* str, int* out_argc, char*** out_argv)
@@ -49,45 +44,15 @@ static void parse_argv_string(const char* str, int* out_argc, char*** out_argv)
     *out_argv = argv;
 }
 
-/// Get tx.argv from Intent via JNI. Returns 1 if found, 0 on failure.
-static int get_from_intent(ANativeActivity* activity, int* out_argc, char*** out_argv)
+/// Get argv string from DroidActivity.getArgvString(). Returns 1 if found, 0 on failure.
+static int get_from_activity(ANativeActivity* activity, JNIEnv* env, int* out_argc, char*** out_argv)
 {
-    JNIEnv* env = nullptr;
-    if (activity->vm->AttachCurrentThread(&env, nullptr) != JNI_OK) {
-        LOGW("AttachCurrentThread failed");
-        return 0;
-    }
-    jobject me = activity->clazz;
-    jclass acl = env->GetObjectClass(me);
-    if (!acl) {
-        LOGW("GetObjectClass failed");
-        return 0;
-    }
-    jmethodID getIntent = env->GetMethodID(acl, "getIntent", "()Landroid/content/Intent;");
-    if (!getIntent) {
-        LOGW("GetMethodID getIntent failed");
-        return 0;
-    }
-    jobject intent = env->CallObjectMethod(me, getIntent);
-    if (!intent) {
-        LOGW("getIntent() returned null");
-        return 0;
-    }
-    jclass icl = env->GetObjectClass(intent);
-    if (!icl) return 0;
-    jmethodID getStringExtra = env->GetMethodID(icl, "getStringExtra", "(Ljava/lang/String;)Ljava/lang/String;");
-    if (!getStringExtra) {
-        LOGW("GetMethodID getStringExtra failed");
-        return 0;
-    }
-    jstring key = env->NewStringUTF(TX_ARGV_EXTRA);
-    if (!key) return 0;
-    jstring jstr = (jstring)env->CallObjectMethod(intent, getStringExtra, key);
-    env->DeleteLocalRef(key);
-    if (!jstr) {
-        LOGW("getStringExtra(tx.argv) returned null");
-        return 0;
-    }
+    jclass clazz = env->GetObjectClass(activity->clazz);
+    if (!clazz) return 0;
+    jmethodID getArgvString = env->GetMethodID(clazz, "getArgvString", "()Ljava/lang/String;");
+    if (!getArgvString) return 0;
+    jstring jstr = (jstring)env->CallObjectMethod(activity->clazz, getArgvString);
+    if (!jstr) return 0;
     const char* utf = env->GetStringUTFChars(jstr, nullptr);
     if (!utf) {
         env->DeleteLocalRef(jstr);
@@ -96,7 +61,6 @@ static int get_from_intent(ANativeActivity* activity, int* out_argc, char*** out
     parse_argv_string(utf, out_argc, out_argv);
     env->ReleaseStringUTFChars(jstr, utf);
     env->DeleteLocalRef(jstr);
-    LOGW("droid_argv_from_intent: argc=%d", *out_argc);
     return 1;
 }
 
@@ -120,9 +84,9 @@ static void fallback(int* out_argc, char*** out_argv)
     }
 }
 
-DroidArgv::DroidArgv(ANativeActivity* activity)
+DroidArgv::DroidArgv(ANativeActivity* activity, JNIEnv* env)
 {
-    if (!get_from_intent(activity, &argc_, &argv_)) {
+    if (!get_from_activity(activity, env, &argc_, &argv_)) {
         fallback(&argc_, &argv_);
     }
 }

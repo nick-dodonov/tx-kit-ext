@@ -50,6 +50,7 @@ _aapt_badging_path = "/Users/rix/Library/Android/sdk/build-tools/36.0.0/aapt"
 _DEFAULT_TIMEOUT = 5
 _TX_ARGV_EXTRA = "tx.argv"
 _LAUNCHABLE_ACTIVITY_RE = re.compile(r"launchable-activity: name='([^']+)'")
+_DEFAULT_TAIL_SECONDS = 0.1
 _CRASH_TAIL_SECONDS = 0.3
 # With -v color, logcat may prefix lines with ANSI escape codes, so use search() not match()
 _VM_EXITING_RE = re.compile(r"VM exiting with result code (\d+)", re.IGNORECASE)
@@ -95,12 +96,10 @@ class ExitEvent:
     exit_code: int | None = None
 
     def take_exit_code(self) -> int:
-        msg = f"{self.reason}{self.descr and f' {self.descr}' or ''}"
+        log.info(f"{self.reason}{self.descr and f' {self.descr}' or ''}")
         if self.reason == ExitReason.COMPLETED:
             code = self.exit_code if self.exit_code is not None else 0
-            log.debug(msg) if code == 0 else log.error(msg)
             return code
-        log.error(msg)
         return 1
 
 
@@ -309,7 +308,7 @@ class DroidCommand(Command):
                 log.debug(f"PID {self.app_pid} from system log '{_START_PROC_RE.pattern}' -> {mo.groups()}")
 
         # Handle events from app and system logcat until exit condition is detected (normal or abnormal)
-        tail_seconds = 0
+        tail_seconds = _DEFAULT_TAIL_SECONDS
         try:
             while True:
                 item = await event_queue.get()

@@ -1,10 +1,11 @@
 #pragma once
 
 #include <android/native_activity.h>
+#include <jni.h>
 
 /// RAII holder for argc/argv from Intent (or fallback). Frees in destructor.
 struct DroidArgv {
-    DroidArgv(ANativeActivity* activity);
+    DroidArgv(ANativeActivity* activity, JNIEnv* env);
     ~DroidArgv();
 
     DroidArgv(const DroidArgv&) = delete;

@@ -18,7 +18,6 @@ static void simulate_crash()
 }
 int main(int argc, char** argv)
 {
-    std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << std::endl;
     std::cout << get_greeting("World") << std::endl;
     std::cout << "argc=" << argc << std::endl;
     for (int i = 0; i < argc; ++i) {
@@ -35,6 +34,5 @@ int main(int argc, char** argv)
     }
 
     std::cout << "exit code: " << argc - 1 << std::endl;
-    std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << std::endl;
     return argc - 1;
 }

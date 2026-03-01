@@ -36,7 +36,7 @@ class Command(ABC):
 
     @staticmethod
     def _log_delimiter(symbol: str, color: str, length: int = 64) -> None:
-        print(f"{color}{symbol * length}{Style.RESET_ALL}")
+        print(f"{color}{symbol * length}{Style.RESET_ALL}", flush=True)
 
     @staticmethod
     def _log_delimiter_header(scope_prefix: str) -> None:
