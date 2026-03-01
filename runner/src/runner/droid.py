@@ -46,7 +46,10 @@ log = logging.getLogger(__name__)
 
 
 _aapt_path = "/Users/rix/Library/Android/sdk/build-tools/36.0.0/aapt2"
+_aapt_badging_path = "/Users/rix/Library/Android/sdk/build-tools/36.0.0/aapt"
 _DEFAULT_TIMEOUT = 5
+_TX_ARGV_EXTRA = "tx.argv"
+_LAUNCHABLE_ACTIVITY_RE = re.compile(r"launchable-activity: name='([^']+)'")
 _CRASH_TAIL_SECONDS = 0.3
 # With -v color, logcat may prefix lines with ANSI escape codes, so use search() not match()
 _VM_EXITING_RE = re.compile(r"VM exiting with result code (\d+)", re.IGNORECASE)
@@ -125,12 +128,32 @@ async def _run_asyncio(cmd: list[str] | str, **kwargs) -> asyncio.subprocess.Pro
     return await asyncio.create_subprocess_exec(*cmd, **kwargs)
 
 
+def _get_launcher_activity(apk_path: Path) -> str:
+    """Get launchable activity name from APK via aapt dump badging."""
+    result = _run(
+        [_aapt_badging_path, "dump", "badging", str(apk_path)],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    mo = _LAUNCHABLE_ACTIVITY_RE.search(result.stdout)
+    if not mo:
+        raise ValueError(f"No launchable-activity in {apk_path}")
+    return mo.group(1)
+
+
 class DroidCommand(Command):
     """Command that runs droid main() directly."""
 
-    def __init__(self, apk_path: Path, timeout: int = _DEFAULT_TIMEOUT):
+    def __init__(
+        self,
+        apk_path: Path,
+        args: list[str] | None = None,
+        timeout: int = _DEFAULT_TIMEOUT,
+    ):
         Command.__init__(self, f"[DROID: {apk_path.name}]")
         self.apk_path = apk_path
+        self.args = args or []
         self.timeout = timeout
 
         # Get package name from APK
@@ -138,6 +161,11 @@ class DroidCommand(Command):
         package_name = result.stdout.strip()
         log.debug(f"package: {package_name}")
         self.package_name = package_name
+
+        # Get launcher activity from APK
+        self.launcher_activity = _get_launcher_activity(apk_path)
+        self.component = f"{package_name}/{self.launcher_activity}"
+        log.debug(f"launcher_activity: {self.launcher_activity}, component: {self.component}")
 
     def execute(self) -> int:
         """Execute and return exit code. Runs async logic via asyncio.run()."""
@@ -173,14 +201,17 @@ class DroidCommand(Command):
         uid = uid_line.split("uid:")[1]
         return uid
 
-    @staticmethod
-    def _run_app(package_name: str) -> None:
-        _run(
-            ["adb", "shell", "monkey", "-p", package_name, "-c", "android.intent.category.LAUNCHER", "1"],
-            check=True,
-            capture_output=True,
-            text=True,
-        )
+    def _run_app(self) -> None:
+        """Launch app via am start. Passes tx.argv extra when args are provided."""
+        if self.args:
+            args_str = " ".join(self.args)
+            # Pass as single shell string so "foo bar" survives device shell parsing
+            am_cmd = f"am start -n {self.component} --es {_TX_ARGV_EXTRA} {shlex.quote(args_str)}"
+            cmd = ["adb", "shell", am_cmd]
+        else:
+            cmd = ["adb", "shell", "am", "start", "-n", self.component]
+        log.debug(f"am start: component={self.component}, args={self.args}")
+        _run(cmd, check=True, capture_output=True, text=True)
 
     async def _run_app_and_handle_logs(self) -> ExitEvent:
         """Start logcat processes, wait for exit condition, return exit code."""
@@ -243,7 +274,7 @@ class DroidCommand(Command):
         system_logcat_task = asyncio.create_task(emit_logcat_events(system_proc, LogSource.SYSTEM))
         timeout_task = asyncio.create_task(emit_timeout_event())
 
-        self._run_app(self.package_name)
+        self._run_app()
 
         def _log_line(source: LogSource, line: str) -> None:
             prefix = f"{Style.DIM}[{source.value}]{Style.RESET_ALL}"
@@ -346,12 +377,13 @@ def main(args: list[str]) -> int:
         default=_DEFAULT_TIMEOUT,
         help=f"Timeout in seconds (default: {_DEFAULT_TIMEOUT})",
     )
-    parsed_args, _ = parser.parse_known_intermixed_args(args)
-    log.debug(f"Droid: {parsed_args}")
+    parsed_args, remain_args = parser.parse_known_intermixed_args(args)
+    log.debug(f"Droid: {parsed_args}, args for app: {remain_args}")
 
     return DroidCommand(
         Path(parsed_args.file),
-        parsed_args.timeout,
+        args=remain_args,
+        timeout=parsed_args.timeout,
     ).scoped_execute()
 
 

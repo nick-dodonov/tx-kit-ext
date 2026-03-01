@@ -19,3 +19,6 @@ build --tool_java_runtime_version=17
 # just to speedup local testing
 build --android_platforms=//test/droid:arm64-v8a
 mobile-install --define num_dex_shards=1
+
+# build --explain=.explain.log --verbose_explanations
+build --incompatible_strict_action_env

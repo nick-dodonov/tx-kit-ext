@@ -55,7 +55,7 @@ def _main(options: Options) -> int:
             finder=finder,
             found_file=found_file,
         )
-        command = droid.DroidCommand(ctx.found_file)
+        command = droid.DroidCommand(ctx.found_file, ctx.options.args)
     elif platform == Platform.EXEC:
         command = cmd.RunCommand(
             scope_prefix=f"[EXEC: {found_file.name}]",
