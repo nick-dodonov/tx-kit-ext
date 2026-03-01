@@ -7,9 +7,15 @@
 
 extern int main(int, char**);
 
-static void crash()
+// TODO: move to //test/cc by argument
+static void simulate_force_exit()
 {
-    LOGW("crash()");
+    LOGW("simulate_force_exit(): _exit(17)");
+    _exit(17);
+}
+static void simulate_crash()
+{
+    LOGW("simulate_crash(): SIGSEGV");
     int* p = nullptr;
     *p = 1;
     (void)p;
@@ -18,8 +24,6 @@ static void crash()
 JNIEXPORT void ANativeActivity_onCreate(ANativeActivity* activity, void* savedState, size_t savedStateSize)
 {
     LOGW("starting main(): activity=%p savedState=%p savedStateSize=%zu", activity, savedState, savedStateSize);
-    //_exit(111);
-    //crash();
 
     redirect_stdout_to_logcat();
     int result = main(0, nullptr);
