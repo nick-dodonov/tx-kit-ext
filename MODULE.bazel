@@ -6,7 +6,7 @@ module(
 )
 
 ################################################################
-# Dependencies that are used by rules and tools
+# Custom rules and tools dependencies
 ################################################################
 
 # Build rules dependencies
@@ -24,6 +24,9 @@ bazel_dep(name = "bazel_skylib", version = "1.9.0")
 
 # Disabled protobuf override because rules_android already depends on good 33.4 (and 0.7.1 cannot have higher)
 # bazel_dep(name = "protobuf", version = "34.0-rc1")  # Override protobuf version to avoid Python 3.8-3.10 toolchain requirements
+
+# test dependencies
+bazel_dep(name = "googletest", version = "1.17.0.bcr.2", dev_dependency = True)
 
 ################################################################
 # WASM / Emscripten build support

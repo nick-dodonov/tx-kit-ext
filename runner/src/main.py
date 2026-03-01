@@ -58,7 +58,7 @@ def _parse_args() -> Options:
 
 
 if __name__ == "__main__":
-    print(f"{Fore.CYAN}{Style.BRIGHT}⭐ Runner {Style.DIM}(Python {sys.version.split()[0]}, PID {os.getpid()}){Style.RESET_ALL}")
+    print(f"{Fore.CYAN}{Style.BRIGHT}⭐ Runner {Style.DIM}(Python {sys.version.split()[0]}, PID {os.getpid()}){Style.RESET_ALL}", flush=True)
     options = _parse_args()
     log.debug("starting runner: %s", options)
     runner.start(options)

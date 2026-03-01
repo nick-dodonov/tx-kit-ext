@@ -1,5 +1,11 @@
 """Common utilities for building tx binaries and tests."""
 
+def log_warning(message):
+    """Logs a warning message during the build."""
+    _YELLOW = "\033[1;33m"
+    _RESET = "\033[0m"
+    print(_YELLOW + "\n⚠️  WARNING: " + _RESET + message)  # buildifier: disable=print
+
 def _get_default_copts():
     """Returns default platform-specific copts for tx targets."""
     return select({
@@ -73,9 +79,3 @@ tx_cc = struct(
     get_cxxopts = _get_cxxopts,
     get_linkopts = _get_linkopts,
 )
-
-def log_warning(message):
-    """Logs a warning message during the build."""
-    _YELLOW = "\033[1;33m"
-    _RESET = "\033[0m"
-    print(_YELLOW + "\n⚠️  WARNING: " + _RESET + message)  # buildifier: disable=print
