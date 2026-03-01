@@ -22,3 +22,7 @@ mobile-install --define num_dex_shards=1
 
 # build --explain=.explain.log --verbose_explanations
 build --incompatible_strict_action_env
+
+# TODO: resarch how to use node/emsdk/android sdk tools from integrated modules without hardcoding PATH
+#  anyway hardcoded PATH is better to setup in user's .bazelrc
+build --action_env=PATH="/usr/bin:/bin:/opt/homebrew/bin:/Users/rix/Library/Android/sdk/platform-tools"

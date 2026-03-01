@@ -1,6 +1,5 @@
-load("//rules/build:multi_binary.bzl", "multi_binary")
+load("//rules/build:multi_binary.bzl", "multi_binary", "multi_test")
 load("//rules/build:multi_library.bzl", "multi_library")
-load("@rules_cc//cc:cc_test.bzl", "cc_test")
 
 multi_library(
     name = "lib",
@@ -15,7 +14,7 @@ multi_binary(
     deps = [":lib"],
 )
 
-cc_test(
+multi_test(
     name = "tst",
     srcs = ["cc_tst.cpp"],
     deps = [
