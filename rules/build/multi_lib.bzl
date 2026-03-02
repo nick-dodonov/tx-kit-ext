@@ -9,7 +9,7 @@ load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load(":tx_common.bzl", "tx_cc")
 
 
-def _multi_library_impl(name, visibility, **kwargs):
+def _multi_lib_impl(name, visibility, **kwargs):
     # multi_library manages target_compatible_with itself
     if kwargs.pop("target_compatible_with", None) != None:
         fail("multi_library does not support target_compatible_with attribute")
@@ -58,8 +58,8 @@ def _multi_library_impl(name, visibility, **kwargs):
 
 
 # https://bazel.build/extending/macros
-multi_library = macro(
+multi_lib = macro(
     inherit_attrs = native.cc_library,
-    implementation = _multi_library_impl,
+    implementation = _multi_lib_impl,
     attrs = {},
 )

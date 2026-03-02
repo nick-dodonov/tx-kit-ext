@@ -10,8 +10,8 @@ load("@emsdk//emscripten_toolchain:wasm_rules.bzl", "wasm_cc_binary")
 load(":run_wrapper_cmd.bzl", "make_run_wrapper_cmd")
 load(":tx_common.bzl", "tx_cc")
 
-_DROID_GLUE_LIB = "//rules/build/droid:droid_glue"
-_DROID_MANIFEST_TEMPLATE = "//rules/build/droid:AndroidManifest.xml.template"
+_DROID_GLUE_LIB = Label("//rules/build/droid:droid_glue")
+_DROID_MANIFEST_TEMPLATE = Label("//rules/build/droid:AndroidManifest.xml.template")
 
 # cc_binary-only attributes to exclude when creating cc_library for droid
 _CC_BINARY_ONLY_ATTRS = [
@@ -39,10 +39,10 @@ _CC_TEST_ONLY_ATTRS = [
 ]
 
 
-def _multi_platform_impl(name, visibility, is_test, **kwargs):
+def _multi_app_impl(name, visibility, is_test, **kwargs):
     #TODO: exclude attribute from inheritence
     if kwargs.pop("target_compatible_with", None) != None:
-        fail("multi_binary does not support target_compatible_with attribute")
+        fail("multi_app does not support target_compatible_with attribute")
 
     kwargs.pop("is_test", None)  # ignore if passed
     droid_manifest = kwargs.pop("droid_manifest", None)
@@ -200,7 +200,7 @@ def _multi_platform_impl(name, visibility, is_test, **kwargs):
 # https://bazel.build/extending/macros
 multi_binary = macro(
     inherit_attrs = native.cc_binary,
-    implementation = lambda name, visibility, **kwargs: _multi_platform_impl(name, visibility, False, **kwargs),
+    implementation = lambda name, visibility, **kwargs: _multi_app_impl(name, visibility, False, **kwargs),
     attrs = {
         "droid_manifest": attr.label(default = None),
     },
@@ -208,7 +208,7 @@ multi_binary = macro(
 
 multi_test = macro(
     inherit_attrs = native.cc_test,
-    implementation = lambda name, visibility, **kwargs: _multi_platform_impl(name, visibility, True, **kwargs),
+    implementation = lambda name, visibility, **kwargs: _multi_app_impl(name, visibility, True, **kwargs),
     attrs = {
         "droid_manifest": attr.label(default = None),
     },

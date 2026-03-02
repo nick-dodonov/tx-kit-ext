@@ -1,7 +1,7 @@
-load("//rules/build:multi_binary.bzl", "multi_binary", "multi_test")
-load("//rules/build:multi_library.bzl", "multi_library")
+load("//rules/build:multi_lib.bzl", "multi_lib")
+load("//rules/build:multi_app.bzl", "multi_binary", "multi_test")
 
-multi_library(
+multi_lib(
     name = "lib",
     srcs = ["cc_lib.cpp"],
     hdrs = ["cc_lib.h"],

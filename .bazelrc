@@ -3,24 +3,26 @@
 startup --windows_enable_symlinks
 build --enable_runfiles
 build --build_python_zip=false # building python zip is slow and deprecated
+# build --explain=.explain.log --verbose_explanations
 
 # common:wasm --platform_suffix=wasm
 common:wasm --platforms=@emsdk//:platform_wasm
 # common:wasm --extra_toolchains=@bazel_tools//tools/python:autodetecting_toolchain
 
-# common:droid -- build Android targets
-common:droid --platforms=//test/droid:arm64-v8a
+################################################################
+# Droid default build setup
+common:droid --platforms=@rules_android//:arm64-v8a
+build --android_platforms=@rules_android//:arm64-v8a
 
-# TODO: droid config
 # Workaround for bazel mobile-install //test/droid/app --android_platforms=//test/droid:arm64-v8a
 #   otherwise it fails w/ "com/android/tools/deployer/Sites has been compiled by a more recent version of the Java Runtime (class file version 61.0), this version of the Java Runtime only recognizes class file versions up to 55.0"
 # TODO: fix or remove when better improved runner will be used instead of bazel mobile-install
 build --tool_java_runtime_version=17
-# just to speedup local testing
-build --android_platforms=//test/droid:arm64-v8a
 mobile-install --define num_dex_shards=1
 
-# build --explain=.explain.log --verbose_explanations
+################################################################
+# Same builds with different PATH
+#   Bazel 8 --incompatible_strict_action_env is false, Bazel 9 enables it by default, so prepare for better hermeticity
 build --incompatible_strict_action_env
 
 # TODO: resarch how to use node/emsdk/android sdk tools from integrated modules without hardcoding PATH
