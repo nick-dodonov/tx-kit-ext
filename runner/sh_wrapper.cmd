@@ -31,6 +31,7 @@ echo -n "$_DIM"
         "BUILD_WORKSPACE_DIRECTORY"
         "RUNFILES_DIR"
         "RUNFILES_MANIFEST_FILE"
+        # "PATH"
     )
     for var in "${_ENV_VARS[@]}"; do
         if [ -n "${!var}" ]; then

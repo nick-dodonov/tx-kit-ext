@@ -39,12 +39,12 @@ _CC_TEST_ONLY_ATTRS = [
 ]
 
 
-def _multi_app_impl(name, visibility, is_test, **kwargs):
+def _multi_app_impl(name, visibility, **kwargs):
     #TODO: exclude attribute from inheritence
     if kwargs.pop("target_compatible_with", None) != None:
         fail("multi_app does not support target_compatible_with attribute")
 
-    kwargs.pop("is_test", None)  # ignore if passed
+    is_test = kwargs.pop("is_test")
     droid_manifest = kwargs.pop("droid_manifest", None)
 
     kwargs["copts"] = tx_cc.get_copts(kwargs.pop("copts", []))
@@ -86,14 +86,11 @@ def _multi_app_impl(name, visibility, is_test, **kwargs):
         visibility = visibility,
     )
 
-    wasm_cmd_kwargs = {
-        "visibility": visibility,
-        "is_test": is_test,
-    }
     make_run_wrapper_cmd(
         name = "{}-wasm.cmd".format(name),
         bin_target = ":{}-wasm.dir".format(name),
-        **wasm_cmd_kwargs,
+        is_test = is_test,
+        visibility = visibility,
     )
 
     if is_test:
@@ -150,14 +147,11 @@ def _multi_app_impl(name, visibility, is_test, **kwargs):
         visibility = visibility,
     )
 
-    droid_cmd_kwargs = {
-        "visibility": visibility,
-        "is_test": is_test,
-    }
     make_run_wrapper_cmd(
         name = "{}.cmd".format(droid_name),
         bin_target = ":{}-apk".format(droid_name),
-        **droid_cmd_kwargs,
+        is_test = is_test,
+        visibility = visibility,
     )
 
     if is_test:
@@ -198,18 +192,22 @@ def _multi_app_impl(name, visibility, is_test, **kwargs):
 
 
 # https://bazel.build/extending/macros
-multi_binary = macro(
+multi_app = macro(
     inherit_attrs = native.cc_binary,
-    implementation = lambda name, visibility, **kwargs: _multi_app_impl(name, visibility, False, **kwargs),
+    implementation = _multi_app_impl,
     attrs = {
         "droid_manifest": attr.label(default = None),
+        "is_test": attr.bool(default = False, configurable = False),
     },
 )
 
+multi_binary = multi_app
+
 multi_test = macro(
     inherit_attrs = native.cc_test,
-    implementation = lambda name, visibility, **kwargs: _multi_app_impl(name, visibility, True, **kwargs),
+    implementation = _multi_app_impl,
     attrs = {
         "droid_manifest": attr.label(default = None),
+        "is_test": attr.bool(default = True, configurable = False),
     },
 )
