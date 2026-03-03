@@ -1,5 +1,7 @@
 #include <iostream>
+#if !defined(_WIN32)
 #include <unistd.h>
+#endif
 
 #include "cc_lib.h"
 
