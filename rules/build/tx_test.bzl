@@ -2,7 +2,7 @@
 
 load("@rules_cc//cc:cc_test.bzl", "cc_test")
 load(":tx_common.bzl", "tx_cc")
-load(":run_wrapper_cmd.bzl", "make_run_wrapper_cmd")
+load(":run_wrapper_cmd.bzl", "run_wrapper_cmd")
 
 
 def tx_test(name, **kwargs):
@@ -29,7 +29,7 @@ def tx_test(name, **kwargs):
     )
 
     cmd_name = "{}.cmd".format(name)
-    make_run_wrapper_cmd(
+    run_wrapper_cmd(
         name = cmd_name,
         bin_target = ":{}".format(bin_name),
         is_test = True,

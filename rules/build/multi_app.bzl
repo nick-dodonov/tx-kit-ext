@@ -7,7 +7,7 @@ load("@rules_android//rules:rules.bzl", "android_binary")
 
 load("@emsdk//emscripten_toolchain:wasm_rules.bzl", "wasm_cc_binary")
 
-load(":run_wrapper_cmd.bzl", "make_run_wrapper_cmd")
+load(":run_wrapper_cmd.bzl", "run_wrapper_cmd")
 load(":tx_common.bzl", "tx_cc")
 
 _DROID_GLUE_LIB = Label("//rules/build/droid:droid_glue")
@@ -87,7 +87,7 @@ def _multi_app_impl(name, visibility, **kwargs):
         visibility = visibility,
     )
 
-    make_run_wrapper_cmd(
+    run_wrapper_cmd(
         name = "{}-wasm".format(name),
         bin_target = ":{}-wasm.dir".format(name),
         is_test = is_test,
@@ -135,7 +135,7 @@ def _multi_app_impl(name, visibility, **kwargs):
         visibility = visibility,
     )
 
-    make_run_wrapper_cmd(
+    run_wrapper_cmd(
         name = "{}".format(droid_name),
         bin_target = ":{}-apk".format(droid_name),
         is_test = is_test,

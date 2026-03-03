@@ -7,12 +7,12 @@ _runner_target = Label("//runner:runner")
 _sh_wrapper_target = Label("//runner:sh_wrapper.cmd")
 
 
-def generate_run_wrapper_script(name, bin_target, testonly=False):
-    """Generate simple script for running a binary target via the runner target from rootpath.
+def _run_wrapper_args(name, bin_target, testonly=False):
+    """Generate arguments script for running a binary target via the runner target from rootpath.
 
     NOTE:
-        It cannot be used directly for execution without runfiles. 
-        So it must be wrapped with sh_binary or sh_test with runner and binary targets in data.
+        It cannot be used directly for execution without runfiles.
+        So it must be wrapped with sh_binary/sh_test with runner and binary target in dependencies.
     """
     native.genrule(
         name = "{}.genrule".format(name),
@@ -60,7 +60,7 @@ echo $${{runner_path}} $${{binary_path}} > $@
     )
 
 
-def make_run_wrapper_cmd(name, bin_target, is_test=False, **kwargs):
+def run_wrapper_cmd(name, bin_target, is_test=False, **kwargs):
     """Creates a shell wrapper command for running a binary target via the runner target.
     
     Args:
@@ -74,7 +74,7 @@ def make_run_wrapper_cmd(name, bin_target, is_test=False, **kwargs):
     #TODO: run_wrapper_cmd possibly can be optimized by single rule that generates wrapper script with runfiles 
     #       without intermediate arguments file and binary/test wrapper with data dependencies
     runner_args_name = "{}.args".format(cmd_name)
-    generate_run_wrapper_script(
+    _run_wrapper_args(
         name = runner_args_name,
         bin_target = bin_target,
         testonly = kwargs.get("testonly", False),
@@ -107,12 +107,14 @@ def make_run_wrapper_cmd(name, bin_target, is_test=False, **kwargs):
         ],
         **kwargs,
 
-        #TODO: possibly restrict exec_compatible_with / target_compatible_with to host platforms
+        #TODO: possibly restrict exec_compatible_with to host platforms:
+        #   load("@platforms//host:constraints.bzl", "HOST_CONSTRAINTS")
+        #   exec_compatible_with = HOST_CONSTRAINTS,
+        # or target_compatible_with.. but it fails with multi_app
         # target_compatible_with = select({
         #     "@platforms//os:windows": [],
         #     "@platforms//os:linux": [],
         #     "@platforms//os:macos": [],
         #     #"//conditions:default": ["@platforms//:incompatible"],
         # }),
-        # tags = ["wasm"],
     )

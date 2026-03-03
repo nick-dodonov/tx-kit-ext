@@ -2,7 +2,7 @@
 
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load(":tx_common.bzl", "tx_cc")
-load(":run_wrapper_cmd.bzl", "make_run_wrapper_cmd")
+load(":run_wrapper_cmd.bzl", "run_wrapper_cmd")
 
 #TODO: try rewrite using Symbolic Macro https://bazel.build/versions/9.0.0/extending/macros
 def tx_binary(name, **kwargs):
@@ -22,7 +22,7 @@ def tx_binary(name, **kwargs):
     )
 
     cmd_name = "{}.cmd".format(name)
-    make_run_wrapper_cmd(
+    run_wrapper_cmd(
         name = cmd_name,
         bin_target = ":{}".format(bin_name),
         tags = ["manual"],
