@@ -51,12 +51,13 @@ def _multi_app_impl(name, visibility, **kwargs):
     kwargs["cxxopts"] = tx_cc.get_cxxopts(kwargs.pop("cxxopts", []))
     kwargs["linkopts"] = tx_cc.get_linkopts(kwargs.pop("linkopts", []))
 
-    host_rule = cc_test if is_test else cc_binary
+    ################################################################
+    # Current target configuration platform binary
+    host_cc_rule = cc_test if is_test else cc_binary
     # cc_test does not have cc_binary-only attrs (output_licenses, etc.)
     host_kwargs = {k: v for k, v in kwargs.items() if not (is_test and k in _CC_BINARY_ONLY_ATTRS)}
 
-    # Current target configuration platform binary
-    host_rule(
+    host_cc_rule(
         name = "{}-host".format(name),
         visibility = visibility,
         target_compatible_with = select({
@@ -67,11 +68,11 @@ def _multi_app_impl(name, visibility, **kwargs):
         **host_kwargs,
     )
 
-    # WASM specific targets including runner wrapper
+    ################################################################
+    # WASM specific targets with runner wrapper
     wasm_kwargs = {k: v for k, v in kwargs.items() if k not in (_CC_TEST_ONLY_ATTRS if is_test else [])}
     wasm_kwargs["features"] = [  # toolchain features
         "exit_runtime",  # runner wrapper needs to exit runtime
-        "use_pthreads",  # threading support w/ boost
     ]
     cc_binary(
         name = "{}-wasm.tar".format(name),
@@ -87,27 +88,14 @@ def _multi_app_impl(name, visibility, **kwargs):
     )
 
     make_run_wrapper_cmd(
-        name = "{}-wasm.cmd".format(name),
+        name = "{}-wasm".format(name),
         bin_target = ":{}-wasm.dir".format(name),
         is_test = is_test,
         visibility = visibility,
     )
 
-    if is_test:
-        native.test_suite(
-            name = "{}-wasm".format(name),
-            tests = [":{}-wasm.cmd".format(name)],
-            visibility = visibility,
-        )
-    else:
-        native.alias(
-            name = "{}-wasm".format(name),
-            actual = ":{}-wasm.cmd".format(name),
-            visibility = visibility,
-        )
-
-
-    # Droid (Android) specific targets including runner wrapper
+    ################################################################
+    # Droid (Android) specific targets with runner wrapper
     droid_name = "{}-droid".format(name)
 
     droid_lib_exclude = _CC_BINARY_ONLY_ATTRS + (_CC_TEST_ONLY_ATTRS if is_test else [])
@@ -148,33 +136,21 @@ def _multi_app_impl(name, visibility, **kwargs):
     )
 
     make_run_wrapper_cmd(
-        name = "{}.cmd".format(droid_name),
+        name = "{}".format(droid_name),
         bin_target = ":{}-apk".format(droid_name),
         is_test = is_test,
         visibility = visibility,
     )
 
-    if is_test:
-        native.test_suite(
-            name = droid_name,
-            tests = [":{}.cmd".format(droid_name)],
-            visibility = visibility,
-        )
-    else:
-        native.alias(
-            name = droid_name,
-            actual = ":{}.cmd".format(droid_name),
-            visibility = visibility,
-        )
-
+    ################################################################
     # Default alias for current target platform
     if is_test:
         native.test_suite(
             name = name,
             tests = [
                 ":{}-host".format(name),
-                ":{}-wasm.cmd".format(name),
-                ":{}.cmd".format(droid_name),
+                ":{}-wasm".format(name),
+                ":{}".format(droid_name),
             ],
             visibility = visibility,
         )
@@ -185,8 +161,8 @@ def _multi_app_impl(name, visibility, **kwargs):
             visibility = visibility,
             actual = select({
                 "//conditions:default": ":{}-host".format(name),
-                "@platforms//cpu:wasm32": ":{}-wasm.cmd".format(name),
-                "@platforms//os:android": ":{}.cmd".format(droid_name),
+                "@platforms//cpu:wasm32": ":{}-wasm".format(name),
+                "@platforms//os:android": ":{}".format(droid_name),
             }),
         )
 

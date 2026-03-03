@@ -277,10 +277,19 @@ class DroidCommand(Command):
 
         def _log_line(source: LogSource, line: str) -> None:
             prefix = f"{Style.DIM}[{source.value}]{Style.RESET_ALL}"
-            if source == LogSource.APP:
-                log.info(f"{prefix} {line}")
+            if log.isEnabledFor(logging.DEBUG):
+                if source == LogSource.APP:
+                    log.info(f"{prefix} {line}")
+                else:
+                    log.debug(f"{prefix} {line}")
             else:
-                log.debug(f"{prefix} {line}")
+                # strip logcat line heads like 
+                #   "03-03 18:26:33.635544 10126  5118  5118 "
+                #   "03-03 18:32:44.810636  root   356   356 "
+                if source == LogSource.APP:
+                    line = re.sub(r"\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\.\d+\s+.+\s+\d+\s+\d+\s+", "", line)
+                    log.info(f"{line}")
+
 
         def _log_remaining_lines() -> None:
             while True:

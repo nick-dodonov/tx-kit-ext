@@ -1,5 +1,7 @@
-load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
-load("@rules_shell//shell:sh_test.bzl", "sh_test")
+# load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+# load("@rules_shell//shell:sh_test.bzl", "sh_test")
+load("@bazel_skylib//rules:native_binary.bzl", "native_binary")
+load("@bazel_skylib//rules:native_binary.bzl", "native_test")
 
 _runner_target = Label("//runner:runner")
 _sh_wrapper_target = Label("//runner:sh_wrapper.cmd")
@@ -62,31 +64,55 @@ def make_run_wrapper_cmd(name, bin_target, is_test=False, **kwargs):
     """Creates a shell wrapper command for running a binary target via the runner target.
     
     Args:
-        name: The name of the binary target to wrap.
+        name: Target name for the wrapper command.
         bin_target: The label of the binary target to be executed by the runner.
         is_test: Whether this wrapper must be a test target. Defaults to False.
         **kwargs: Additional keyword arguments passed to sh_binary or sh_test.
     """
-    if not name.endswith(".cmd"):
-        fail("Runner wrapper name must end with .cmd extension (hybrid executable for macOS/Windows/Linux).")
+    cmd_name = "{}.cmd".format(name)
 
-    #TODO: possibly can be optimized by single rule that generates wrapper script and runs it without intermediate arguments file
-    runner_args_name = "{}.args".format(name)
+    #TODO: run_wrapper_cmd possibly can be optimized by single rule that generates wrapper script with runfiles 
+    #       without intermediate arguments file and binary/test wrapper with data dependencies
+    runner_args_name = "{}.args".format(cmd_name)
     generate_run_wrapper_script(
         name = runner_args_name,
         bin_target = bin_target,
         testonly = kwargs.get("testonly", False),
     )
 
-    sh_rule = sh_binary if not is_test else sh_test
-    sh_rule(
+    # sh_rule = sh_binary if not is_test else sh_test
+    # sh_rule(
+    #     name = cmd_name,
+    #     srcs = [_sh_wrapper_target],
+    #     data = [
+    #         runner_args_name,
+    #         _runner_target,
+    #         bin_target,
+    #     ],
+    #     **kwargs,
+    # )
+
+    # Skylib native wrapper for running target via runner, to avoid declaring target name with extension (otherwise Windows fails in sh_binary/sh_test)
+    # - Not required to declare alias without extension over it to simplify usage
+    # - https://github.com/bazelbuild/bazel-skylib/blob/main/docs/native_binary_doc.md
+    native_rule = native_binary if not is_test else native_test
+    native_rule(
         name = name,
-        srcs = [_sh_wrapper_target],
+        out = cmd_name,
+        src = _sh_wrapper_target,
         data = [
             runner_args_name,
             _runner_target,
             bin_target,
         ],
-        #TODO: possibly restrict exec_compatible_with / target_compatible_with to host platforms only (using something as @platforms//os:HOST)
         **kwargs,
+
+        #TODO: possibly restrict exec_compatible_with / target_compatible_with to host platforms
+        # target_compatible_with = select({
+        #     "@platforms//os:windows": [],
+        #     "@platforms//os:linux": [],
+        #     "@platforms//os:macos": [],
+        #     #"//conditions:default": ["@platforms//:incompatible"],
+        # }),
+        # tags = ["wasm"],
     )
