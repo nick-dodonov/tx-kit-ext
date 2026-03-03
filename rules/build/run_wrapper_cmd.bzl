@@ -104,7 +104,7 @@ def run_wrapper_cmd(name, bin_target, is_test=False, **kwargs):
             runner_args_name,
             _runner_target,
             bin_target,
-        ],
+        ] + kwargs.pop("data", []),
         **kwargs,
 
         #TODO: possibly restrict exec_compatible_with to host platforms:
