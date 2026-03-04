@@ -2,7 +2,7 @@ load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_android//rules:rules.bzl", "android_library")
 
 exports_files([
-    "AndroidManifest.xml.template",
+    "template.AndroidManifest.xml",
 ])
 
 # Native bridge library is implemented with androidndk native_app_glue

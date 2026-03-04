@@ -6,6 +6,7 @@ the current --platforms configuration.
 """
 
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_android//rules:rules.bzl", "android_library")
 load(":tx_common.bzl", "tx_cc")
 
 

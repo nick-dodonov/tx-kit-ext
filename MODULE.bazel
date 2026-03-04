@@ -75,6 +75,7 @@ register_toolchains(
 #   https://bazel.build/start/android-app
 #   https://github.com/bazelbuild/examples/tree/main/android
 bazel_dep(name = "rules_android", version = "0.7.1")
+bazel_dep(name = "rules_java", version = "9.3.0")  # for JavaInfo used in multi_app
 
 register_toolchains(
     "@rules_android//toolchains/android:android_default_toolchain",

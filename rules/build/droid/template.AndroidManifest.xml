@@ -3,7 +3,7 @@
     android:versionCode="1"
     android:versionName="1.0" >
 
-    <!-- TODO: merge from dependencies -->
+    <!-- TODO: make template based because "uses-permissions attributes are never exported" https://bazel.build/versions/6.2.0/reference/be/android#android_library.exports_manifest -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- TODO: allow HTTP in debug from deps:
@@ -18,7 +18,7 @@
     -->
 
     <uses-sdk
-        android:minSdkVersion="21"
+        android:minSdkVersion="23"
         android:targetSdkVersion="35" />
 
     <application

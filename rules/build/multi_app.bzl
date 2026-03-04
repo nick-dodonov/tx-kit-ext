@@ -3,15 +3,19 @@
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_cc//cc:cc_test.bzl", "cc_test")
-load("@rules_android//rules:rules.bzl", "android_binary")
+load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")
 
 load("@emsdk//emscripten_toolchain:wasm_rules.bzl", "wasm_cc_binary")
 
+load("@rules_android//rules:rules.bzl", "android_binary")
+load("@rules_java//java/common:java_info.bzl", "JavaInfo")
+
 load(":run_wrapper_cmd.bzl", "run_wrapper_cmd")
 load(":tx_common.bzl", "tx_cc")
+load(":filter_deps.bzl", "cc_deps_filter")
 
 _DROID_GLUE_LIB = Label("//rules/build/droid:droid_glue")
-_DROID_MANIFEST_TEMPLATE = Label("//rules/build/droid:AndroidManifest.xml.template")
+_DROID_MANIFEST_TEMPLATE = Label("//rules/build/droid:template.AndroidManifest.xml")
 
 # cc_binary-only attributes to exclude when creating cc_library for droid
 _CC_BINARY_ONLY_ATTRS = [
@@ -60,12 +64,28 @@ def _multi_app_impl(name, visibility, **kwargs):
     kwargs["cxxopts"] = tx_cc.get_cxxopts(kwargs.pop("cxxopts", []))
     kwargs["linkopts"] = tx_cc.get_linkopts(kwargs.pop("linkopts", []))
 
+    # Extract and filter deps for C++ targets (cc_binary, cc_library, cc_test)
+    # Android targets need all deps (both CcInfo and JavaInfo), so we keep them separate
+    all_deps = kwargs.pop("deps", [])
+    if all_deps:
+        # Create a filter target to extract only CcInfo deps for C++ targets
+        cc_deps_filter_name = "{}.cc_deps".format(name)
+        cc_deps_filter(
+            name = cc_deps_filter_name,
+            deps = all_deps,
+            visibility = ["//visibility:private"],
+        )
+        filtered_cc_deps = [":{}".format(cc_deps_filter_name)]
+    else:
+        filtered_cc_deps = []
+
     ################################################################
     # Current target configuration platform binary
     if "host" in enabled_platforms:
         host_cc_rule = cc_test if is_test else cc_binary
         # cc_test does not have cc_binary-only attrs (output_licenses, etc.)
         host_kwargs = {k: v for k, v in kwargs.items() if not (is_test and k in _CC_BINARY_ONLY_ATTRS)}
+        host_kwargs["deps"] = filtered_cc_deps
 
         host_cc_rule(
             name = "{}-host".format(name),
@@ -82,6 +102,7 @@ def _multi_app_impl(name, visibility, **kwargs):
     # WASM specific targets with runner wrapper
     if "wasm" in enabled_platforms:
         wasm_kwargs = {k: v for k, v in kwargs.items() if k not in (_CC_TEST_ONLY_ATTRS if is_test else [])}
+        wasm_kwargs["deps"] = filtered_cc_deps
         wasm_kwargs["features"] = [  # toolchain features
             "exit_runtime",  # runner wrapper needs to exit runtime
         ]
@@ -109,7 +130,7 @@ def _multi_app_impl(name, visibility, **kwargs):
     # Droid (Android) specific targets with runner wrapper
     if "droid" in enabled_platforms:
         droid_name = "{}-droid".format(name)
-
+        
         droid_lib_exclude = _CC_BINARY_ONLY_ATTRS + (_CC_TEST_ONLY_ATTRS if is_test else [])
         droid_lib_kwargs = {k: v for k, v in kwargs.items() if k not in droid_lib_exclude}
         cc_library(
@@ -117,6 +138,7 @@ def _multi_app_impl(name, visibility, **kwargs):
             visibility = visibility,
             target_compatible_with = ["@platforms//os:android"],
             alwayslink = is_test,  # Prevent linker from stripping test registration code
+            deps = filtered_cc_deps,
             **droid_lib_kwargs,
         )
 
@@ -143,7 +165,7 @@ def _multi_app_impl(name, visibility, **kwargs):
             deps = [
                 ":{}.lib".format(droid_name),
                 _DROID_GLUE_LIB,
-            ],
+            ] + all_deps,
             visibility = visibility,
         )
 
@@ -211,6 +233,7 @@ def _multi_app_impl(name, visibility, **kwargs):
 # Common attributes shared between multi_app and multi_test
 _COMMON_ATTRS = {
     "droid_manifest": attr.label(default = None),
+
     "platforms": attr.string_list(
         default = ["host", "wasm", "droid"],
         configurable = False,
@@ -224,6 +247,13 @@ multi_app = macro(
     implementation = _multi_app_impl,
     attrs = _COMMON_ATTRS | {
         "is_test": attr.bool(default = False, configurable = False),
+        "deps": attr.label_list(
+            providers = [
+                [CcInfo],
+                [JavaInfo],
+            ],
+            doc = "Dependencies: cc_library (CcInfo) or android_library/java_library (JavaInfo). All deps are passed to both cc_library and android_binary.",
+        ),
     },
 )
 
@@ -234,5 +264,12 @@ multi_test = macro(
     implementation = _multi_app_impl,
     attrs = _COMMON_ATTRS | {
         "is_test": attr.bool(default = True, configurable = False),
+        "deps": attr.label_list(
+            providers = [
+                [CcInfo],
+                [JavaInfo],
+            ],
+            doc = "Dependencies: cc_library (CcInfo) or android_library/java_library (JavaInfo). All deps are passed to both cc_library and android_binary.",
+        ),
     },
 )
