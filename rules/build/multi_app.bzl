@@ -50,6 +50,7 @@ def _multi_app_impl(name, visibility, **kwargs):
 
     is_test = kwargs.pop("is_test")
     droid_manifest = kwargs.pop("droid_manifest", None)
+    droid_srcs = kwargs.pop("droid_srcs", [])
     enabled_platforms = kwargs.pop("platforms", ["host", "wasm", "droid"])
     
     # Validate platforms parameter
@@ -162,6 +163,7 @@ def _multi_app_impl(name, visibility, **kwargs):
         android_binary(
             name = droid_apk_name,
             manifest = manifest_src,
+            srcs = droid_srcs,
             deps = [
                 ":{}.lib".format(droid_name),
                 _DROID_GLUE_LIB,
@@ -233,7 +235,19 @@ def _multi_app_impl(name, visibility, **kwargs):
 # Common attributes shared between multi_app and multi_test
 _COMMON_ATTRS = {
     "droid_manifest": attr.label(default = None),
+    "droid_srcs": attr.label_list(
+        allow_files = [".java", ".srcjar"],
+        default = [],
+        doc = "Java/Kotlin source files for Android platform. Automatically creates android_library.",
+    ),
 
+    "deps": attr.label_list(
+        providers = [
+            [CcInfo],
+            [JavaInfo],
+        ],
+        doc = "Dependencies: cc_library (CcInfo) or android_library/java_library (JavaInfo). All deps are passed to both cc_library and android_binary.",
+    ),
     "platforms": attr.string_list(
         default = ["host", "wasm", "droid"],
         configurable = False,
@@ -247,13 +261,6 @@ multi_app = macro(
     implementation = _multi_app_impl,
     attrs = _COMMON_ATTRS | {
         "is_test": attr.bool(default = False, configurable = False),
-        "deps": attr.label_list(
-            providers = [
-                [CcInfo],
-                [JavaInfo],
-            ],
-            doc = "Dependencies: cc_library (CcInfo) or android_library/java_library (JavaInfo). All deps are passed to both cc_library and android_binary.",
-        ),
     },
 )
 
@@ -264,12 +271,5 @@ multi_test = macro(
     implementation = _multi_app_impl,
     attrs = _COMMON_ATTRS | {
         "is_test": attr.bool(default = True, configurable = False),
-        "deps": attr.label_list(
-            providers = [
-                [CcInfo],
-                [JavaInfo],
-            ],
-            doc = "Dependencies: cc_library (CcInfo) or android_library/java_library (JavaInfo). All deps are passed to both cc_library and android_binary.",
-        ),
     },
 )
