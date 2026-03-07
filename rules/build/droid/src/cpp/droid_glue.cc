@@ -11,13 +11,20 @@ extern int main(int, char**);
 static JNIEnv* _env = nullptr;
 
 /// Pass main() result to DroidActivity for System.exit() in onDestroy.
-static void setExitCode(ANativeActivity* activity, JNIEnv* env, int code)
+static void finishProcess(ANativeActivity* activity, JNIEnv* env, int code)
 {
+    LOGV("finishProcess: %d", code);
     jclass clazz = env->GetObjectClass(activity->clazz);
-    if (!clazz) return;
-    jmethodID setExitCode = env->GetMethodID(clazz, "setExitCode", "(I)V");
-    if (!setExitCode) return;
-    env->CallVoidMethod(activity->clazz, setExitCode, (jint)code);
+    if (!clazz) {
+        LOGE("finishProcess: GetObjectClass failed");
+        return;
+    }
+    jmethodID method = env->GetMethodID(clazz, "finishProcess", "(I)V");
+    if (!method) {
+        LOGE("finishProcess: GetMethodID failed");
+        return;
+    }
+    env->CallVoidMethod(activity->clazz, method, (jint)code);
 }
 
 static void callMain(ANativeActivity* activity)
@@ -28,8 +35,10 @@ static void callMain(ANativeActivity* activity)
     int result = main(argv.argc(), argv.argv());
 
     LOGD("finished main(): %d", result);
-    setExitCode(activity, _env, result);
-    ANativeActivity_finish(activity);
+
+    finishProcess(activity, _env, result);
+    //LOGV("finishing activity");
+    //ANativeActivity_finish(activity);
 }
 
 static void onStart(ANativeActivity* activity)
@@ -46,7 +55,7 @@ static void onStop(ANativeActivity* activity)
 //JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved);
 JNIEXPORT void ANativeActivity_onCreate(ANativeActivity* activity, void* savedState, size_t savedStateSize)
 {
-    LOGD("onCreate: activity=%p savedState=%p savedStateSize=%zu", activity, savedState, savedStateSize);
+    LOGD("onCreate: %p savedState=%p savedStateSize=%zu", activity, savedState, savedStateSize);
     //JNI_OnLoad(activity->vm, nullptr);
 
     if (activity->vm->AttachCurrentThread(&_env, nullptr) != JNI_OK) {

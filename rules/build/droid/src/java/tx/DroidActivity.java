@@ -6,26 +6,40 @@ import android.os.Bundle;
 import android.util.Log;
 
 public class DroidActivity extends NativeActivity {
-    final String TAG = "droid.M";
+    final String TAG = "droid.A";
 
     private int exitCode = 128; // default to signal 128 for unknown exit code
 
     @Override
-    public void onCreate(Bundle savedInstanceState) {
-        Log.d(TAG, "onCreate");
+    protected void onCreate(Bundle savedInstanceState) {
+        Log.v(TAG, "onCreate");
         super.onCreate(savedInstanceState);
     }
 
     @Override
     protected void onDestroy() {
-        Log.d(TAG, "onDestroy");
+        Log.v(TAG, "onDestroy");
         super.onDestroy();
         System.exit(exitCode);
     }
 
+    @Override
+    protected void onStart() {
+        Log.v(TAG, "onStart");
+        super.onStart();
+    }
+
+    @Override
+    protected void onStop() {
+        Log.v(TAG, "onStop");
+        super.onStop();
+    }
+
     /// Called from native glue to pass main() result before finish.
-    public void setExitCode(int code) {
-        exitCode = code;
+    public void finishProcess(int exitCode) {
+        Log.v(TAG, String.format("finishProcess: %d", exitCode));
+        this.exitCode = exitCode;
+        this.finish();
     }
 
     /// Returns tx.argv from Intent, or null if not present. Called from native.
