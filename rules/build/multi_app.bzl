@@ -54,6 +54,8 @@ def _multi_app_impl(name, visibility, **kwargs):
     is_test = kwargs.pop("is_test")
     droid_manifest = kwargs.pop("droid_manifest", None)
     droid_srcs = kwargs.pop("droid_srcs", [])
+    droid_assets = kwargs.pop("droid_assets", [])
+    droid_assets_dir = kwargs.pop("droid_assets_dir", None)
     enabled_platforms = kwargs.pop("platforms", ["host", "wasm", "droid"])
     
     # Validate platforms parameter
@@ -150,6 +152,8 @@ def _multi_app_impl(name, visibility, **kwargs):
         android_binary(
             name = droid_apk_name,
             srcs = droid_srcs,
+            assets = droid_assets,
+            assets_dir = droid_assets_dir,
             deps = [
                 ":{}.lib".format(droid_name),
                 _DROID_GLUE_LIB,
@@ -201,8 +205,12 @@ _COMMON_ATTRS = {
     "droid_srcs": attr.label_list(
         allow_files = [".java", ".srcjar"],
         default = [],
-        doc = "Java/Kotlin source files for Android platform. Automatically creates android_library.",
     ),
+    "droid_assets": attr.label_list(
+        allow_files = True,
+        cfg = "target",
+    ),
+    "droid_assets_dir": attr.string(),
 
     "deps": attr.label_list(
         providers = [
