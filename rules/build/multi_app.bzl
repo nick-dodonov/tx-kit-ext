@@ -10,6 +10,8 @@ load("@emsdk//emscripten_toolchain:wasm_rules.bzl", "wasm_cc_binary")
 load("@rules_android//rules:rules.bzl", "android_binary")
 load("@rules_java//java/common:java_info.bzl", "JavaInfo")
 
+load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+
 load(":run_wrapper_cmd.bzl", "run_wrapper_cmd")
 load(":tx_common.bzl", "tx_cc")
 load(":filter_deps.bzl", "cc_deps_filter")
@@ -145,7 +147,18 @@ def _multi_app_impl(name, visibility, **kwargs):
 
         droid_apk_name = "{}-apk".format(droid_name)
         if droid_manifest != None:
-            manifest_src = droid_manifest
+            manifest_gen = "{}_manifest".format(droid_name)
+            manifest_out = "{}_AndroidManifest.xml".format(droid_name)
+            expand_template(
+                name = "{}_manifest".format(droid_name),
+                template = droid_manifest,
+                out = manifest_out,
+                substitutions = {
+                    "__LIB_NAME__": droid_apk_name,
+                    "$LIB_NAME": droid_apk_name,
+                },
+            )
+            manifest_src = ":{}".format(manifest_gen)
         else:
             manifest_gen = "{}_manifest".format(droid_name)
             manifest_out = "{}_AndroidManifest.xml".format(droid_name.replace("-", "_"))
@@ -162,12 +175,15 @@ def _multi_app_impl(name, visibility, **kwargs):
 
         android_binary(
             name = droid_apk_name,
-            manifest = manifest_src,
             srcs = droid_srcs,
             deps = [
                 ":{}.lib".format(droid_name),
                 _DROID_GLUE_LIB,
             ] + all_deps,
+            manifest = manifest_src,
+            manifest_values = {
+                "native_lib_name": droid_apk_name,
+            },
             visibility = visibility,
         )
 
