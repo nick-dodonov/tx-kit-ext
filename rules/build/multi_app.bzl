@@ -13,9 +13,12 @@ load("@rules_java//java/common:java_info.bzl", "JavaInfo")
 load(":run_wrapper_cmd.bzl", "run_wrapper_cmd")
 load(":tx_common.bzl", "tx_cc")
 load(":filter_deps.bzl", "cc_deps_filter")
-load(":multi_common.bzl", "validate_platforms", "generate_manifest", "build_platform_select_dict")
+load(":multi_common.bzl", "validate_platforms", "build_platform_select_dict")
 
+# Android library to wrap execution of cc_library, allowing to declare simple main() function in C++ app
 _DROID_GLUE_LIB = Label("//rules/build/droid:droid_glue")
+# Default Android manifest template for applications
+_DROID_GLUE_DEFAULT_MANIFEST = Label("//rules/build/droid:template.AndroidManifest.xml")
 
 # cc_binary-only attributes to exclude when creating cc_library for droid
 _CC_BINARY_ONLY_ATTRS = [
@@ -60,6 +63,7 @@ def _multi_app_impl(name, visibility, **kwargs):
     kwargs["cxxopts"] = tx_cc.get_cxxopts(kwargs.pop("cxxopts", []))
     kwargs["linkopts"] = tx_cc.get_linkopts(kwargs.pop("linkopts", []))
 
+    ################################################################
     # Extract and filter deps for C++ targets (cc_binary, cc_library, cc_test)
     # Android targets need all deps (both CcInfo and JavaInfo), so we keep them separate
     all_deps = kwargs.pop("deps", [])
@@ -131,7 +135,6 @@ def _multi_app_impl(name, visibility, **kwargs):
         droid_lib_kwargs = {k: v for k, v in kwargs.items() if k not in droid_lib_exclude}
         cc_library(
             name = "{}.lib".format(droid_name),
-            visibility = visibility,
             target_compatible_with = ["@platforms//os:android"],
             alwayslink = is_test,  # Prevent linker from stripping test registration code
             deps = filtered_cc_deps,
@@ -140,13 +143,9 @@ def _multi_app_impl(name, visibility, **kwargs):
 
         droid_apk_name = "{}-apk".format(droid_name)
         
-        # Generate Android manifest using shared function
-        manifest_src = generate_manifest(
-            base_name = droid_name,
-            droid_manifest = droid_manifest,
-            lib_name = droid_apk_name,
-            use_default_template = True,
-        )
+        # Use default manifest template if no custom manifest provided
+        if droid_manifest == None:
+            droid_manifest = _DROID_GLUE_DEFAULT_MANIFEST
 
         android_binary(
             name = droid_apk_name,
@@ -155,7 +154,7 @@ def _multi_app_impl(name, visibility, **kwargs):
                 ":{}.lib".format(droid_name),
                 _DROID_GLUE_LIB,
             ] + all_deps,
-            manifest = manifest_src,
+            manifest = droid_manifest,
             manifest_values = {
                 "native_lib_name": droid_apk_name,
             },

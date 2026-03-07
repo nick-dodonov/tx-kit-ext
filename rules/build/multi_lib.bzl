@@ -15,7 +15,7 @@ load("@rules_java//java/common:java_info.bzl", "JavaInfo")
 
 load(":tx_common.bzl", "tx_cc")
 load(":filter_deps.bzl", "cc_deps_filter")
-load(":multi_common.bzl", "validate_platforms", "generate_manifest", "build_platform_select_dict")
+load(":multi_common.bzl", "validate_platforms", "build_platform_select_dict")
 
 def _multi_lib_impl(name, visibility, **kwargs):
     # multi_library manages target_compatible_with itself
@@ -34,6 +34,7 @@ def _multi_lib_impl(name, visibility, **kwargs):
     kwargs["copts"] = tx_cc.get_copts(kwargs.pop("copts", []))
     kwargs["cxxopts"] = tx_cc.get_cxxopts(kwargs.pop("cxxopts", []))
 
+    ################################################################
     # Extract and filter deps for C++ targets (cc_library)
     # Android targets may include JavaInfo deps, so we filter to only CcInfo
     all_deps = kwargs.pop("deps", [])
@@ -92,28 +93,14 @@ def _multi_lib_impl(name, visibility, **kwargs):
                 **kwargs,
             )
             
-            # Generate Android manifest if needed (no default template for libraries)
-            manifest_src = generate_manifest(
-                base_name = droid_name,
-                droid_manifest = droid_manifest,
-                lib_name = droid_name,
-                use_default_template = False,
+            android_library(
+                name = droid_name,
+                srcs = droid_srcs,
+                manifest = droid_manifest,
+                deps = [":{}".format(droid_cc_name)] + all_deps,  # cc_library + all deps (CcInfo + JavaInfo)
+                visibility = visibility,
+                target_compatible_with = ["@platforms//os:android"],
             )
-            
-            # Create android_library that wraps cc_library (main target name)
-            android_library_kwargs = {
-                "name": droid_name,
-                "srcs": droid_srcs,
-                "deps": [":{}".format(droid_cc_name)] + all_deps,  # cc_library + all deps (CcInfo + JavaInfo)
-                "visibility": visibility,
-                "target_compatible_with": ["@platforms//os:android"],
-            }
-            
-            # Only add manifest if one was generated
-            if manifest_src != None:
-                android_library_kwargs["manifest"] = manifest_src
-            
-            android_library(**android_library_kwargs)
         else:
             # No Java sources: create cc_library with main name (backward compatible)
             cc_library(
