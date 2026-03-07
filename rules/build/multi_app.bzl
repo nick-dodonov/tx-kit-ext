@@ -10,14 +10,12 @@ load("@emsdk//emscripten_toolchain:wasm_rules.bzl", "wasm_cc_binary")
 load("@rules_android//rules:rules.bzl", "android_binary")
 load("@rules_java//java/common:java_info.bzl", "JavaInfo")
 
-load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
-
 load(":run_wrapper_cmd.bzl", "run_wrapper_cmd")
 load(":tx_common.bzl", "tx_cc")
 load(":filter_deps.bzl", "cc_deps_filter")
+load(":multi_common.bzl", "validate_platforms", "generate_manifest", "build_platform_select_dict")
 
 _DROID_GLUE_LIB = Label("//rules/build/droid:droid_glue")
-_DROID_MANIFEST_TEMPLATE = Label("//rules/build/droid:template.AndroidManifest.xml")
 
 # cc_binary-only attributes to exclude when creating cc_library for droid
 _CC_BINARY_ONLY_ATTRS = [
@@ -56,12 +54,7 @@ def _multi_app_impl(name, visibility, **kwargs):
     enabled_platforms = kwargs.pop("platforms", ["host", "wasm", "droid"])
     
     # Validate platforms parameter
-    valid_platforms = ["host", "wasm", "droid"]
-    for platform in enabled_platforms:
-        if platform not in valid_platforms:
-            fail("Invalid platform '{}'. Must be one of: {}".format(platform, valid_platforms))
-    if len(enabled_platforms) == 0:
-        fail("platforms list cannot be empty. Must specify at least one platform: {}".format(valid_platforms))
+    validate_platforms(enabled_platforms)
 
     kwargs["copts"] = tx_cc.get_copts(kwargs.pop("copts", []))
     kwargs["cxxopts"] = tx_cc.get_cxxopts(kwargs.pop("cxxopts", []))
@@ -146,32 +139,14 @@ def _multi_app_impl(name, visibility, **kwargs):
         )
 
         droid_apk_name = "{}-apk".format(droid_name)
-        if droid_manifest != None:
-            manifest_gen = "{}_manifest".format(droid_name)
-            manifest_out = "{}_AndroidManifest.xml".format(droid_name)
-            expand_template(
-                name = "{}_manifest".format(droid_name),
-                template = droid_manifest,
-                out = manifest_out,
-                substitutions = {
-                    "__LIB_NAME__": droid_apk_name,
-                    "$LIB_NAME": droid_apk_name,
-                },
-            )
-            manifest_src = ":{}".format(manifest_gen)
-        else:
-            manifest_gen = "{}_manifest".format(droid_name)
-            manifest_out = "{}_AndroidManifest.xml".format(droid_name.replace("-", "_"))
-            native.genrule(
-                name = manifest_gen,
-                srcs = [_DROID_MANIFEST_TEMPLATE],
-                outs = [manifest_out],
-                cmd = "sed 's/__LIB_NAME__/{}/' $(location {}) > $@".format(
-                    droid_apk_name,
-                    _DROID_MANIFEST_TEMPLATE,
-                ),
-            )
-            manifest_src = ":{}".format(manifest_gen)
+        
+        # Generate Android manifest using shared function
+        manifest_src = generate_manifest(
+            base_name = droid_name,
+            droid_manifest = droid_manifest,
+            lib_name = droid_apk_name,
+            use_default_template = True,
+        )
 
         android_binary(
             name = droid_apk_name,
@@ -213,39 +188,12 @@ def _multi_app_impl(name, visibility, **kwargs):
         )
     else:
         # Alias to simplify build/run for current target platform
-        # Build select() dict dynamically based on enabled platforms
-        if len(enabled_platforms) == 1:
-            # Single platform: use simple alias without select
-            platform = enabled_platforms[0]
-            target_name = ":{}-{}".format(name, platform)
-            native.alias(
-                name = name,
-                visibility = visibility,
-                actual = target_name,
-            )
-        else:
-            # Multiple platforms: use select() to choose based on current platform
-            select_dict = {}
-            default_target = None
-            
-            if "host" in enabled_platforms:
-                default_target = ":{}-host".format(name)
-            if "wasm" in enabled_platforms:
-                select_dict["@platforms//cpu:wasm32"] = ":{}-wasm".format(name)
-                if default_target == None:
-                    default_target = ":{}-wasm".format(name)
-            if "droid" in enabled_platforms:
-                select_dict["@platforms//os:android"] = ":{}-droid".format(name)
-                if default_target == None:
-                    default_target = ":{}-droid".format(name)
-            
-            select_dict["//conditions:default"] = default_target
-            
-            native.alias(
-                name = name,
-                visibility = visibility,
-                actual = select(select_dict),
-            )
+        select_dict = build_platform_select_dict(name, enabled_platforms)
+        native.alias(
+            name = name,
+            visibility = visibility,
+            actual = select(select_dict),
+        )
 
 
 # Common attributes shared between multi_app and multi_test
