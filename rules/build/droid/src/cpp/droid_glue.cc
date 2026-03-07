@@ -6,9 +6,15 @@
 #include "droid_log.h"
 #include "redirect_stdout.h"
 
-extern int main(int, char**);
+// Declare as weak - linker won't fail if not defined.
+// This allows completely override glue (for example by SdlActivity and its own mechanism to call main()).
+__attribute__((weak))
+int main(int argc, const char** argv);
 
-static JNIEnv* _env = nullptr;
+namespace 
+{
+    JNIEnv* _env = nullptr;
+}
 
 /// Pass main() result to DroidActivity for System.exit() in onDestroy.
 static void finishProcess(ANativeActivity* activity, JNIEnv* env, int code)
@@ -29,16 +35,21 @@ static void finishProcess(ANativeActivity* activity, JNIEnv* env, int code)
 
 static void callMain(ANativeActivity* activity)
 {
-    LOGD("starting main()");
+    // Require application provides "standard" main() entry point
+    if (main == nullptr) {
+        LOGE("main() must be implemented!");
+        finishProcess(activity, _env, 127); // 127 is commonly used to indicate "command not found"
+        return;
+    }
+
+    LOGD("---> main()");
 
     DroidArgv argv(activity, _env);
     int result = main(argv.argc(), argv.argv());
 
-    LOGD("finished main(): %d", result);
+    LOGD("<--- main(): %d", result);
 
     finishProcess(activity, _env, result);
-    //LOGV("finishing activity");
-    //ANativeActivity_finish(activity);
 }
 
 static void onStart(ANativeActivity* activity)
@@ -52,11 +63,9 @@ static void onStop(ANativeActivity* activity)
     LOGD("onStop: %p", activity);
 }
 
-//JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved);
 JNIEXPORT void ANativeActivity_onCreate(ANativeActivity* activity, void* savedState, size_t savedStateSize)
 {
     LOGD("onCreate: %p savedState=%p savedStateSize=%zu", activity, savedState, savedStateSize);
-    //JNI_OnLoad(activity->vm, nullptr);
 
     if (activity->vm->AttachCurrentThread(&_env, nullptr) != JNI_OK) {
         LOGE("AttachCurrentThread failed");
