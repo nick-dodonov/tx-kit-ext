@@ -25,6 +25,7 @@ cc_library(
 android_library(
     name = "droid_glue",
     srcs = ["src/java/tx/DroidActivity.java"],
+    manifest = "template.AndroidManifest.xml",
     deps = [":droid_native"],
     visibility = ["//visibility:public"],
 )

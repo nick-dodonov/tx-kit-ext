@@ -23,9 +23,10 @@ def _multi_lib_impl(name, visibility, **kwargs):
         fail("multi_library does not support target_compatible_with attribute")
 
     # Extract Android-specific attributes
-    droid_manifest = kwargs.pop("droid_manifest", None)
-    droid_srcs = kwargs.pop("droid_srcs", [])
     droid_library = kwargs.pop("droid_library", False)
+    droid_manifest = kwargs.pop("droid_manifest", None)
+    droid_srcs = kwargs.pop("droid_srcs")
+    droid_exports = kwargs.pop("droid_exports")
     enabled_platforms = kwargs.pop("platforms", ["host", "wasm", "droid"])
     
     # Validate platforms parameter
@@ -98,6 +99,7 @@ def _multi_lib_impl(name, visibility, **kwargs):
                 srcs = droid_srcs,
                 manifest = droid_manifest,
                 deps = [":{}".format(droid_cc_name)] + all_deps,  # cc_library + all deps (CcInfo + JavaInfo)
+                exports = droid_exports,
                 visibility = visibility,
                 target_compatible_with = ["@platforms//os:android"],
             )
@@ -132,10 +134,22 @@ multi_lib = macro(
             ],
             doc = "Dependencies: cc_library (CcInfo) or android_library/java_library (JavaInfo). Only CcInfo deps are passed to cc_library targets.",
         ),
+
         "droid_library": attr.bool(
             default = False,
             configurable = False,
             doc = "Set to True to create android_library wrapper for Android platform. Required when droid_srcs or droid_manifest is specified.",
+        ),
+        "droid_exports": attr.label_list(
+            providers = [
+                [CcInfo],
+                [JavaInfo],
+            ],
+            doc = (
+                "The closure of all rules reached via `exports` attributes are considered " +
+                "direct dependencies of any rule that directly depends on the target with " +
+                "`exports`. The `exports` are not direct deps of the rule they belong to."
+            ),
         ),
         "droid_manifest": attr.label(
             default = None,
@@ -146,6 +160,7 @@ multi_lib = macro(
             default = [],
             doc = "Java/Kotlin source files for Android platform. Automatically creates android_library wrapping cc_library.",
         ),
+
         "platforms": attr.string_list(
             default = ["host", "wasm", "droid"],
             configurable = False,
