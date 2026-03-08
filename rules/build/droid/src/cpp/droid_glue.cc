@@ -6,10 +6,14 @@
 #include "droid_log.h"
 #include "redirect_stdout.h"
 
+//#define ALLOW_WEAK_MAIN
+
+#ifdef ALLOW_WEAK_MAIN
 // Declare as weak - linker won't fail if not defined.
 // This allows completely override glue (for example by SdlActivity and its own mechanism to call main()).
 __attribute__((weak))
-int main(int argc, const char** argv);
+#endif
+int main(int argc, char* argv[]);
 
 namespace 
 {
@@ -35,12 +39,14 @@ static void finishProcess(ANativeActivity* activity, JNIEnv* env, int code)
 
 static void callMain(ANativeActivity* activity)
 {
+#ifdef ALLOW_WEAK_MAIN
     // Require application provides "standard" main() entry point
     if (main == nullptr) {
         LOGE("main() must be implemented!");
         finishProcess(activity, _env, 127); // 127 is commonly used to indicate "command not found"
         return;
     }
+#endif
 
     LOGD("---> main()");
 

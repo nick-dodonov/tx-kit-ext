@@ -12,7 +12,8 @@ struct DroidArgv {
     DroidArgv& operator=(const DroidArgv&) = delete;
 
     int argc() const { return argc_; }
-    const char** argv() const { return const_cast<const char**>(argv_); }
+    char** argv() const { return argv_; }
+    //const char** argv() const { return const_cast<const char**>(argv_); }
 
 private:
     int argc_ = 0;

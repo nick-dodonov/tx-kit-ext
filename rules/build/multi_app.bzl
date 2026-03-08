@@ -54,6 +54,7 @@ def _multi_app_impl(name, visibility, **kwargs):
     is_test = kwargs.pop("is_test")
     droid_manifest = kwargs.pop("droid_manifest", None)
     droid_srcs = kwargs.pop("droid_srcs", [])
+    droid_deps = kwargs.pop("droid_deps")
     droid_assets = kwargs.pop("droid_assets", [])
     droid_assets_dir = kwargs.pop("droid_assets_dir", None)
     enabled_platforms = kwargs.pop("platforms", ["host", "wasm", "droid"])
@@ -143,21 +144,19 @@ def _multi_app_impl(name, visibility, **kwargs):
             **droid_lib_kwargs,
         )
 
-        droid_apk_name = "{}-apk".format(droid_name)
-        
+        droid_deps = [":{}.lib".format(droid_name)] + droid_deps + all_deps
+
         # Use default manifest template if no custom manifest provided
         if droid_manifest == None:
             droid_manifest = _DROID_GLUE_DEFAULT_MANIFEST
 
+        droid_apk_name = "{}-apk".format(droid_name)
         android_binary(
             name = droid_apk_name,
             srcs = droid_srcs,
             assets = droid_assets,
             assets_dir = droid_assets_dir,
-            deps = [
-                ":{}.lib".format(droid_name),
-                _DROID_GLUE_LIB,
-            ] + all_deps,
+            deps = droid_deps,
             manifest = droid_manifest,
             manifest_values = {
                 "native_lib_name": droid_apk_name,
@@ -205,6 +204,10 @@ _COMMON_ATTRS = {
     "droid_srcs": attr.label_list(
         allow_files = [".java", ".srcjar"],
         default = [],
+    ),
+    "droid_deps": attr.label_list(
+        default = [_DROID_GLUE_LIB],
+        doc = "Labels for Android dependencies (i.e. glue libraries). Default is NativeActivity glue.",
     ),
     "droid_assets": attr.label_list(
         allow_files = True,

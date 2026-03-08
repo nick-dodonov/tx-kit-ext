@@ -265,7 +265,7 @@ class WasmRunner:
 
     def _make_cmd_with_node(self, html_file: Path, args: list[str]) -> list[str]:
         """Run WASM using Node.js (console mode)."""
-        log.info(f"🚀 WASM Node.js mode")
+        log.debug(f"WASM Node.js mode (via node)")
         log.debug(f"cwd: {os.getcwd()}")
         log.debug(f"html: {html_file}")
 
@@ -281,7 +281,7 @@ class WasmRunner:
 
     def _make_cmd_with_emrun(self, html_file: Path, args: list[str], emrun: EmrunOptions) -> list[str]:
         """Run WASM using emrun (browser mode)."""
-        log.info(f"🚀 WASM Browser mode (via emrun)")
+        log.debug(f"WASM Browser mode (via emrun)")
         log.debug(f"cwd: {os.getcwd()}")
         log.debug(f"html: {html_file}")
         if args:
