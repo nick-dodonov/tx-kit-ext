@@ -1,5 +1,5 @@
 load("//rules/build:multi_lib.bzl", "multi_lib")
-load("//rules/build:multi_app.bzl", "multi_binary", "multi_test")
+load("//rules/build:multi_app.bzl", "multi_app", "multi_test")
 
 multi_lib(
     name = "lib",
@@ -8,8 +8,8 @@ multi_lib(
     visibility = ["//visibility:private"],
 )
 
-multi_binary(
-    name = "bin",
+multi_app(
+    name = "app",
     srcs = ["cc_bin.cpp"],
     deps = [":lib"],
 )
@@ -25,5 +25,5 @@ multi_test(
 
 alias(
     name = "cc",
-    actual = ":bin",
+    actual = ":app",
 )

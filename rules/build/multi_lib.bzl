@@ -27,6 +27,7 @@ def _multi_lib_impl(name, visibility, **kwargs):
     droid_manifest = kwargs.pop("droid_manifest", None)
     droid_srcs = kwargs.pop("droid_srcs")
     droid_exports = kwargs.pop("droid_exports")
+    droid_custom_package = kwargs.pop("droid_custom_package", None)
     enabled_platforms = kwargs.pop("platforms", ["host", "wasm", "droid"])
     
     # Validate platforms parameter
@@ -98,6 +99,7 @@ def _multi_lib_impl(name, visibility, **kwargs):
                 name = droid_name,
                 srcs = droid_srcs,
                 manifest = droid_manifest,
+                custom_package = droid_custom_package,
                 deps = [":{}".format(droid_cc_name)] + all_deps,  # cc_library + all deps (CcInfo + JavaInfo)
                 exports = droid_exports,
                 visibility = visibility,
@@ -159,6 +161,13 @@ multi_lib = macro(
             allow_files = [".java", ".srcjar"],
             default = [],
             doc = "Java/Kotlin source files for Android platform. Automatically creates android_library wrapping cc_library.",
+        ),
+        "droid_custom_package": attr.string(
+            doc = ("Java package for which java sources will be generated. " +
+                    "By default the package is inferred from the directory where the BUILD file " +
+                    "containing the rule is. You can specify a different package but this is " +
+                    "highly discouraged since it can introduce classpath conflicts with other " +
+                    "libraries that will only be detected at runtime."),
         ),
 
         "platforms": attr.string_list(

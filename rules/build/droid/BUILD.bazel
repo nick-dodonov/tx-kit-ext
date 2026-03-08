@@ -20,6 +20,7 @@ cc_library(
         "-landroid",
         "-Wl,--undefined=ANativeActivity_onCreate",
     ],
+    visibility = ["//visibility:public"],
 )
 
 android_library(

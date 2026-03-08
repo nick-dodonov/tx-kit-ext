@@ -12,7 +12,11 @@ load("@rules_java//java/common:java_info.bzl", "JavaInfo")
 
 load(":run_wrapper_cmd.bzl", "run_wrapper_cmd")
 load(":tx_common.bzl", "tx_cc")
-load(":filter_deps.bzl", "cc_deps_filter")
+load(
+    ":filter_deps.bzl",
+    "cc_deps_filter",
+    "droid_top_manifest",
+)
 load(":multi_common.bzl", "validate_platforms", "build_platform_select_dict")
 
 # Android library to wrap execution of cc_library, allowing to declare simple main() function in C++ app
@@ -144,11 +148,17 @@ def _multi_app_impl(name, visibility, **kwargs):
             **droid_lib_kwargs,
         )
 
-        droid_deps = [":{}.lib".format(droid_name)] + droid_deps + all_deps
+        droid_deps = [":{}.lib".format(droid_name)] + all_deps + droid_deps
 
-        # Use default manifest template if no custom manifest provided
+        # If no custom manifest provided - use topmost manifest from dependencies:
+        # So it defaults to AndroidManifest.xml from droid_glue library, but can also be overridden in another deps
         if droid_manifest == None:
-            droid_manifest = _DROID_GLUE_DEFAULT_MANIFEST
+            #droid_manifest = _DROID_GLUE_DEFAULT_MANIFEST
+            droid_top_manifest(
+                name = "{}.manifest".format(droid_name),
+                deps = droid_deps,
+            )
+            droid_manifest = ":{}.manifest".format(droid_name)
 
         droid_apk_name = "{}-apk".format(droid_name)
         android_binary(
@@ -159,7 +169,7 @@ def _multi_app_impl(name, visibility, **kwargs):
             deps = droid_deps,
             manifest = droid_manifest,
             manifest_values = {
-                "native_lib_name": droid_apk_name,
+                "native_lib_name": droid_apk_name,  # android_binary rule makes lib{droid_apk_name}.so from cc_library deps
             },
             visibility = visibility,
         )
@@ -237,8 +247,6 @@ multi_app = macro(
         "is_test": attr.bool(default = False, configurable = False),
     },
 )
-
-multi_binary = multi_app
 
 multi_test = macro(
     inherit_attrs = native.cc_test,

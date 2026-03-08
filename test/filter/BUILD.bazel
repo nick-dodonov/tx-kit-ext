@@ -1,0 +1,18 @@
+load("@rules_android//rules:rules.bzl", "android_library")
+load("//rules/build:filter_deps.bzl", "droid_top_manifest")
+
+android_library(
+    name = "derived",
+    manifest = "DerivedAndroidManifest.xml",
+    deps = [
+        "//rules/build/droid:droid_glue",
+    ],
+)
+
+droid_top_manifest(
+    name = "top_manifest",
+    deps = [
+        "//rules/build/droid:droid_native",  # dependency without manifests
+        ":derived",  # dependency with 2 manifests
+    ],
+)
