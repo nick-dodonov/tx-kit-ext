@@ -71,20 +71,19 @@ def _multi_app_impl(name, visibility, **kwargs):
     kwargs["linkopts"] = tx_cc.get_linkopts(kwargs.pop("linkopts", []))
 
     ################################################################
-    # Extract and filter deps for C++ targets (cc_binary, cc_library, cc_test)
-    # Android targets need all deps (both CcInfo and JavaInfo), so we keep them separate
+    # Extract and filter deps for C++ targets (cc_library)
+    # Android deps may include android_library targets, so filter to only CcInfo
     all_deps = kwargs.pop("deps", [])
     if all_deps:
-        # Create a filter target to extract only CcInfo deps for C++ targets
         cc_deps_filter_name = "{}.cc_deps".format(name)
         cc_deps_filter(
             name = cc_deps_filter_name,
             deps = all_deps,
             visibility = ["//visibility:private"],
         )
-        filtered_cc_deps = [":{}".format(cc_deps_filter_name)]
+        cc_deps = [":{}".format(cc_deps_filter_name)]
     else:
-        filtered_cc_deps = []
+        cc_deps = []
 
     ################################################################
     # Current target configuration platform binary
@@ -92,7 +91,7 @@ def _multi_app_impl(name, visibility, **kwargs):
         host_cc_rule = cc_test if is_test else cc_binary
         # cc_test does not have cc_binary-only attrs (output_licenses, etc.)
         host_kwargs = {k: v for k, v in kwargs.items() if not (is_test and k in _CC_BINARY_ONLY_ATTRS)}
-        host_kwargs["deps"] = filtered_cc_deps
+        host_kwargs["deps"] = cc_deps
 
         host_cc_rule(
             name = "{}-host".format(name),
@@ -109,7 +108,7 @@ def _multi_app_impl(name, visibility, **kwargs):
     # WASM specific targets with runner wrapper
     if "wasm" in enabled_platforms:
         wasm_kwargs = {k: v for k, v in kwargs.items() if k not in (_CC_TEST_ONLY_ATTRS if is_test else [])}
-        wasm_kwargs["deps"] = filtered_cc_deps
+        wasm_kwargs["deps"] = cc_deps
         wasm_kwargs["features"] = [  # toolchain features
             "exit_runtime",  # runner wrapper needs to exit runtime
         ]
@@ -140,11 +139,11 @@ def _multi_app_impl(name, visibility, **kwargs):
         
         droid_lib_exclude = _CC_BINARY_ONLY_ATTRS + (_CC_TEST_ONLY_ATTRS if is_test else [])
         droid_lib_kwargs = {k: v for k, v in kwargs.items() if k not in droid_lib_exclude}
+        droid_lib_kwargs["deps"] = cc_deps
         cc_library(
             name = "{}.lib".format(droid_name),
             target_compatible_with = ["@platforms//os:android"],
             alwayslink = is_test,  # Prevent linker from stripping test registration code
-            deps = filtered_cc_deps,
             **droid_lib_kwargs,
         )
 

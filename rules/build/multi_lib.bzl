@@ -17,6 +17,7 @@ load(":tx_common.bzl", "tx_cc")
 load(":filter_deps.bzl", "cc_deps_filter")
 load(":multi_common.bzl", "validate_platforms", "build_platform_select_dict")
 
+
 def _multi_lib_impl(name, visibility, **kwargs):
     # multi_library manages target_compatible_with itself
     if kwargs.pop("target_compatible_with", None) != None:
@@ -38,34 +39,33 @@ def _multi_lib_impl(name, visibility, **kwargs):
 
     ################################################################
     # Extract and filter deps for C++ targets (cc_library)
-    # Android targets may include JavaInfo deps, so we filter to only CcInfo
+    # Android deps may include android_library targets, so filter to only CcInfo
     all_deps = kwargs.pop("deps", [])
     if all_deps:
-        # Create a filter target to extract only CcInfo deps for C++ targets
         cc_deps_filter_name = "{}.cc_deps".format(name)
         cc_deps_filter(
             name = cc_deps_filter_name,
             deps = all_deps,
             visibility = ["//visibility:private"],
         )
-        filtered_cc_deps = [":{}".format(cc_deps_filter_name)]
+        cc_deps = [":{}".format(cc_deps_filter_name)]
     else:
-        filtered_cc_deps = []
+        cc_deps = []
 
     # Update kwargs to use filtered deps
-    kwargs["deps"] = filtered_cc_deps
+    kwargs["deps"] = cc_deps
 
     ################################################################
     # Host: exclude wasm and android
     if "host" in enabled_platforms:
         cc_library(
             name = "{}-host".format(name),
-            visibility = visibility,
             target_compatible_with = select({
                 "@platforms//cpu:wasm32": ["@platforms//:incompatible"],
                 "@platforms//os:android": ["@platforms//:incompatible"],
                 "//conditions:default": [],
             }),
+            visibility = visibility,
             **kwargs,
         )
 
@@ -86,7 +86,6 @@ def _multi_lib_impl(name, visibility, **kwargs):
         
         # Create android_library wrapper when explicitly requested via droid_library
         if droid_library:
-            # Create cc_library with .lib suffix (similar to multi_app pattern)
             droid_cc_name = "{}.lib".format(droid_name)
             cc_library(
                 name = droid_cc_name,
