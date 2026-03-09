@@ -5,6 +5,7 @@ multi_lib(
     name = "lib",
     srcs = ["cc_lib.cpp"],
     hdrs = ["cc_lib.h"],
+    data = ["data.txt"],
     visibility = ["//visibility:private"],
 )
 

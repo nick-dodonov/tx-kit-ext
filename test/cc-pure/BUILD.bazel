@@ -1,0 +1,19 @@
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_binary")
+
+cc_library(
+    name = "lib",
+    srcs = ["lib.cc"],
+    data = ["data.txt"],
+    visibility = [
+        "//visibility:public",
+    ],
+)
+
+cc_binary(
+    name = "bin",
+    srcs = ["bin.cc"],
+    deps = [":lib"],
+    visibility = [
+        "//visibility:public",
+    ],
+)

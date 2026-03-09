@@ -17,7 +17,11 @@ load(
     "cc_deps_filter",
     "droid_top_manifest",
 )
-load(":multi_common.bzl", "validate_platforms", "build_platform_select_dict")
+load(
+    ":multi_common.bzl",
+    "validate_platforms",
+    "build_platform_select_dict",
+)
 
 # Android library to wrap execution of cc_library, allowing to declare simple main() function in C++ app
 _DROID_GLUE_LIB = Label("//rules/build/droid:droid_glue")
@@ -59,6 +63,7 @@ def _multi_app_impl(name, visibility, **kwargs):
     droid_manifest = kwargs.pop("droid_manifest", None)
     droid_srcs = kwargs.pop("droid_srcs", [])
     droid_deps = kwargs.pop("droid_deps")
+    droid_custom_package = kwargs.pop("droid_custom_package", None)
     droid_assets = kwargs.pop("droid_assets", [])
     droid_assets_dir = kwargs.pop("droid_assets_dir", None)
     enabled_platforms = kwargs.pop("platforms", ["host", "wasm", "droid"])
@@ -163,6 +168,7 @@ def _multi_app_impl(name, visibility, **kwargs):
         android_binary(
             name = droid_apk_name,
             srcs = droid_srcs,
+            custom_package = droid_custom_package,
             assets = droid_assets,
             assets_dir = droid_assets_dir,
             deps = droid_deps,
@@ -218,11 +224,21 @@ _COMMON_ATTRS = {
         default = [_DROID_GLUE_LIB],
         doc = "Labels for Android dependencies (i.e. glue libraries). Default is NativeActivity glue.",
     ),
+    "droid_custom_package": attr.string(
+        doc = ("Java package for which java sources will be generated. " +
+                "By default the package is inferred from the directory where the BUILD file " +
+                "containing the rule is. You can specify a different package but this is " +
+                "highly discouraged since it can introduce classpath conflicts with other " +
+                "libraries that will only be detected at runtime."),
+    ),
     "droid_assets": attr.label_list(
         allow_files = True,
         cfg = "target",
+        doc = "Asset files for Android platform. Passed to android_library.",
     ),
-    "droid_assets_dir": attr.string(),
+    "droid_assets_dir": attr.string(
+        doc = "Directory for Android assets. Passed to android_library.",
+    ),
 
     "deps": attr.label_list(
         providers = [

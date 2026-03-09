@@ -14,8 +14,16 @@ load("@rules_android//rules:rules.bzl", "android_library")
 load("@rules_java//java/common:java_info.bzl", "JavaInfo")
 
 load(":tx_common.bzl", "tx_cc")
-load(":filter_deps.bzl", "cc_deps_filter")
-load(":multi_common.bzl", "validate_platforms", "build_platform_select_dict")
+load(
+    ":filter_deps.bzl",
+    "cc_deps_filter",
+    "droid_top_manifest",
+)
+load(
+    ":multi_common.bzl",
+    "validate_platforms",
+    "build_platform_select_dict",
+)
 
 
 def _multi_lib_impl(name, visibility, **kwargs):
@@ -29,6 +37,8 @@ def _multi_lib_impl(name, visibility, **kwargs):
     droid_srcs = kwargs.pop("droid_srcs")
     droid_exports = kwargs.pop("droid_exports")
     droid_custom_package = kwargs.pop("droid_custom_package", None)
+    droid_assets = kwargs.pop("droid_assets", [])
+    droid_assets_dir = kwargs.pop("droid_assets_dir", None)
     enabled_platforms = kwargs.pop("platforms", ["host", "wasm", "droid"])
     
     # Validate platforms parameter
@@ -93,13 +103,24 @@ def _multi_lib_impl(name, visibility, **kwargs):
                 target_compatible_with = ["@platforms//os:android"],
                 **kwargs,
             )
-            
+
+            droid_deps = [":{}.lib".format(droid_name)] + all_deps
+
+            if droid_manifest == None:
+                droid_top_manifest(
+                    name = "{}.manifest".format(droid_name),
+                    deps = droid_deps,
+                )
+                droid_manifest = ":{}.manifest".format(droid_name)
+
             android_library(
                 name = droid_name,
                 srcs = droid_srcs,
                 manifest = droid_manifest,
                 custom_package = droid_custom_package,
-                deps = [":{}".format(droid_cc_name)] + all_deps,  # cc_library + all deps (CcInfo + JavaInfo)
+                assets = droid_assets,
+                assets_dir = droid_assets_dir,
+                deps = droid_deps,
                 exports = droid_exports,
                 visibility = visibility,
                 target_compatible_with = ["@platforms//os:android"],
@@ -141,6 +162,15 @@ multi_lib = macro(
             configurable = False,
             doc = "Set to True to create android_library wrapper for Android platform. Required when droid_srcs or droid_manifest is specified.",
         ),
+        "droid_manifest": attr.label(
+            default = None,
+            doc = "Optional AndroidManifest.xml template for Android platform. If not provided, android_library is created without explicit manifest.",
+        ),
+        "droid_srcs": attr.label_list(
+            allow_files = [".java", ".srcjar"],
+            default = [],
+            doc = "Java/Kotlin source files for Android platform. Automatically creates android_library wrapping cc_library.",
+        ),
         "droid_exports": attr.label_list(
             providers = [
                 [CcInfo],
@@ -152,21 +182,21 @@ multi_lib = macro(
                 "`exports`. The `exports` are not direct deps of the rule they belong to."
             ),
         ),
-        "droid_manifest": attr.label(
-            default = None,
-            doc = "Optional AndroidManifest.xml template for Android platform. If not provided, android_library is created without explicit manifest.",
-        ),
-        "droid_srcs": attr.label_list(
-            allow_files = [".java", ".srcjar"],
-            default = [],
-            doc = "Java/Kotlin source files for Android platform. Automatically creates android_library wrapping cc_library.",
-        ),
         "droid_custom_package": attr.string(
             doc = ("Java package for which java sources will be generated. " +
                     "By default the package is inferred from the directory where the BUILD file " +
                     "containing the rule is. You can specify a different package but this is " +
                     "highly discouraged since it can introduce classpath conflicts with other " +
                     "libraries that will only be detected at runtime."),
+        ),
+        "droid_assets": attr.label_list(
+            allow_files = True,
+            cfg = "target",
+            default = [],
+            doc = "Asset files for Android platform. Passed to android_library.",
+        ),
+        "droid_assets_dir": attr.string(
+            doc = "Directory for Android assets. Passed to android_library.",
         ),
 
         "platforms": attr.string_list(
