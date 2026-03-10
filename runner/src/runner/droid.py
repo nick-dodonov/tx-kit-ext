@@ -345,7 +345,7 @@ class DroidCommand(Command):
                     if mo and self.app_pid is not None and int(mo.group(1)) == self.app_pid:
                         exit_code = int(mo.group(2))
                         tail_seconds = _CRASH_TAIL_SECONDS
-                        return ExitEvent(ExitReason.PROCESS_DIED, f"'{_PROCESS_EXITED_CLEANLY_RE.pattern}' -> {mo.groups()}", exit_code)
+                        return ExitEvent(ExitReason.COMPLETED, f"'{_PROCESS_EXITED_CLEANLY_RE.pattern}' -> {mo.groups()}", exit_code)
                     mo = _PROCESS_EXITED_SIGNAL_RE.search(item.line)
                     if mo and self.app_pid is not None and int(mo.group(1)) == self.app_pid:
                         signal_num = int(mo.group(2))
