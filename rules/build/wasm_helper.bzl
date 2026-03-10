@@ -26,27 +26,27 @@ def _wasm_preload_params_impl(ctx):
     for f in ctx.files.assets:
         # f.path — full path for emcc (on disk)
         # f.short_path — path without the prefix of the external repository/bin directory
-        
+
         # Remove the ../ prefix for external repositories in short_path, if it exists
         vfs_path = f.short_path
         if vfs_path.startswith("../"):
             # turns ../repo_name/path/file into path/file
             vfs_path = "/".join(vfs_path.split("/")[2:])
-        
+
         # Format: physical_path@path_in_wasm
         content.append("--preload-file %s@/%s" % (f.path, vfs_path))
-    
+
     ctx.actions.write(param_file, "\n".join(content))
-    
+
     # return [
     #     DefaultInfo(
     #         files = depset([param_file]),
     #         # Pass files itself to be available to the linker
-    #         runfiles = ctx.runfiles(files = ctx.files.assets) 
+    #         runfiles = ctx.runfiles(files = ctx.files.assets)
     #     )
     # ]
     return [
-        DefaultInfo(files = depset([param_file]))
+        DefaultInfo(files = depset([param_file])),
     ]
 
 wasm_preload_params = rule(
