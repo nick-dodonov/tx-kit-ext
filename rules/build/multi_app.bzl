@@ -64,6 +64,10 @@ def _multi_app_impl(name, visibility, **kwargs):
 
     enabled_platforms = kwargs.pop("platforms", ["host", "wasm", "droid"])
 
+    tags = kwargs.pop("tags", [])
+    if tags == None:
+        tags = []
+
     # Validate platforms parameter
     validate_platforms(enabled_platforms)
 
@@ -97,11 +101,9 @@ def _multi_app_impl(name, visibility, **kwargs):
         host_kwargs = {k: v for k, v in kwargs.items() if not (is_test and k in _CC_BINARY_ONLY_ATTRS)}
         host_kwargs["deps"] = cc_deps
         
-        tags = host_kwargs.pop("tags")
-        host_kwargs["tags"] = tags if tags else [] + ["host"]
-
         host_cc_rule(
             name = "{}-host".format(name),
+            tags = tags + ["host"],
             target_compatible_with = select({
                 "@platforms//cpu:wasm32": ["@platforms//:incompatible"],
                 "@platforms//os:android": ["@platforms//:incompatible"],
@@ -136,6 +138,7 @@ def _multi_app_impl(name, visibility, **kwargs):
         run_wrapper_cmd(
             name = "{}-wasm".format(name),
             bin_target = ":{}-wasm.dir".format(name),
+            tags = tags + ["wasm"],
             is_test = is_test,
             visibility = visibility,
         )
@@ -185,9 +188,9 @@ def _multi_app_impl(name, visibility, **kwargs):
         run_wrapper_cmd(
             name = "{}".format(droid_name),
             bin_target = ":{}-apk".format(droid_name),
+            tags = tags + ["droid", "exclusive"],
             is_test = is_test,
             visibility = visibility,
-            tags = ["exclusive"],
         )
         test_targets.append(":{}".format(droid_name))
 
@@ -199,6 +202,7 @@ def _multi_app_impl(name, visibility, **kwargs):
             name = name,
             tests = test_targets,
             visibility = visibility,
+            tags = tags,
         )
     else:
         # Alias to simplify build/run for current target platform
