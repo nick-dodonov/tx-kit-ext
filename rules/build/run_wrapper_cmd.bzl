@@ -2,6 +2,7 @@ load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("@bazel_skylib//rules:native_binary.bzl", "native_binary")
 load("@bazel_skylib//rules:native_binary.bzl", "native_test")
+load("@platforms//host:constraints.bzl", "HOST_CONSTRAINTS")
 
 _runner_target = Label("//runner:runner")
 _sh_wrapper_cmd = Label("//runner:sh_wrapper.cmd")
@@ -99,18 +100,8 @@ def run_wrapper_cmd(name, bin_target, is_test=False, via_skylib=_NATIVE_RULE_MOD
                 _runner_target,
                 bin_target,
             ] + kwargs.pop("data", []),
+            exec_compatible_with = HOST_CONSTRAINTS,
             **kwargs,
-
-            #TODO: possibly restrict exec_compatible_with to host platforms:
-            #   load("@platforms//host:constraints.bzl", "HOST_CONSTRAINTS")
-            #   exec_compatible_with = HOST_CONSTRAINTS,
-            # or target_compatible_with.. but it fails with multi_app and --platform selection
-            # target_compatible_with = select({
-            #     "@platforms//os:windows": [],
-            #     "@platforms//os:linux": [],
-            #     "@platforms//os:macos": [],
-            #     #"//conditions:default": ["@platforms//:incompatible"],
-            # }),
         )
     else:
         sh_rule = sh_binary if not is_test else sh_test
@@ -125,6 +116,7 @@ def run_wrapper_cmd(name, bin_target, is_test=False, via_skylib=_NATIVE_RULE_MOD
                 _runner_target,
                 bin_target,
             ],
+            exec_compatible_with = HOST_CONSTRAINTS,
             **kwargs,
         )
 

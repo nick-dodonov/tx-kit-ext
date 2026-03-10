@@ -1,6 +1,7 @@
 """Build rule for creating multi-platform binaries based on the same source and available in the same execution environment."""
 
 load("@emsdk//emscripten_toolchain:wasm_rules.bzl", "wasm_cc_binary")
+load("@platforms//host:constraints.bzl", "HOST_CONSTRAINTS")
 load("@rules_android//rules:rules.bzl", "android_binary")
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
@@ -67,6 +68,7 @@ def _multi_app_impl(name, visibility, **kwargs):
     tags = kwargs.pop("tags", [])
     if tags == None:
         tags = []
+    tags = tags + ["multi"]  # Tag to identify multi_app/test targets in test filters, etc.
 
     # Validate platforms parameter
     validate_platforms(enabled_platforms)
@@ -104,11 +106,7 @@ def _multi_app_impl(name, visibility, **kwargs):
         host_cc_rule(
             name = "{}-host".format(name),
             tags = tags + ["host"],
-            target_compatible_with = select({
-                "@platforms//cpu:wasm32": ["@platforms//:incompatible"],
-                "@platforms//os:android": ["@platforms//:incompatible"],
-                "//conditions:default": [],
-            }),
+            target_compatible_with = HOST_CONSTRAINTS,
             visibility = visibility,
             **host_kwargs
         )
@@ -186,9 +184,9 @@ def _multi_app_impl(name, visibility, **kwargs):
         )
 
         run_wrapper_cmd(
-            name = "{}".format(droid_name),
-            bin_target = ":{}-apk".format(droid_name),
-            tags = tags + ["droid", "exclusive"],
+            name = droid_name,
+            bin_target = ":{}".format(droid_apk_name),
+            tags = tags + ["droid", "exclusive"],  # exclusive: prevent parallel execution with other tests (emulator conflict)
             is_test = is_test,
             visibility = visibility,
         )
