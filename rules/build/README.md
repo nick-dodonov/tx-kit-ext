@@ -12,7 +12,7 @@ This directory contains custom Bazel build rules for the TX workspace.
 
 ## Helper Modules
 
-- **tx_common.bzl** - Common utilities for compiler/linker options
+- **cc_common.bzl** - Common utilities for cc compiler/linker options
 - **filter_deps.bzl** - Dependency filtering utilities
 - **run_wrapper_cmd.bzl** - Command-line wrapper generation
 - **droid/** - Android-specific templates and glue code

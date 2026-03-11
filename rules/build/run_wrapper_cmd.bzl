@@ -16,6 +16,7 @@ def _run_wrapper_args(name, bin_target, testonly=False):
         It cannot be used directly for execution without runfiles.
         So it must be wrapped with sh_binary/sh_test with runner and binary target in dependencies.
     """
+
     native.genrule(
         name = "{}.genrule".format(name),
         srcs = [

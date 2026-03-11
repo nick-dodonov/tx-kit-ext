@@ -6,23 +6,26 @@ load("@rules_android//rules:rules.bzl", "android_binary")
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_cc//cc:cc_test.bzl", "cc_test")
-load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")
-load("@rules_java//java/common:java_info.bzl", "JavaInfo")
-load(
-    ":filter_deps.bzl",
-    "cc_deps_filter",
-    "droid_top_manifest",
-)
+load(":filter_deps.bzl", "droid_top_manifest")
 load(
     ":multi_common.bzl",
+    "multi_common",
     "build_platform_select_dict",
     "validate_platforms",
 )
 load(":run_wrapper_cmd.bzl", "run_wrapper_cmd")
-load(":tx_common.bzl", "tx_cc")
+load(":cc_common.bzl", "cc_common")
 
 # Android library to wrap execution of cc_library, allowing to declare simple main() function in C++ app
 _DROID_GLUE_LIB = Label("//rules/build/droid:droid_glue")
+
+# Common attributes shared between multi_app and multi_test
+_COMMON_ATTRS = multi_common.get_common_attrs() | {
+    "droid_deps": attr.label_list(
+        default = [_DROID_GLUE_LIB],
+        doc = "Labels for Android dependencies (i.e. glue libraries). Default is NativeActivity glue.",
+    ),
+}
 
 # cc_binary-only attributes to exclude when creating cc_library for droid
 _CC_BINARY_ONLY_ATTRS = [
@@ -73,9 +76,10 @@ def _multi_app_impl(name, visibility, **kwargs):
     # Validate platforms parameter
     validate_platforms(enabled_platforms)
 
-    kwargs["copts"] = tx_cc.get_copts(kwargs.pop("copts", []))
-    kwargs["cxxopts"] = tx_cc.get_cxxopts(kwargs.pop("cxxopts", []))
-    kwargs["linkopts"] = tx_cc.get_linkopts(kwargs.pop("linkopts", []))
+    kwargs["copts"] = cc_common.get_copts(kwargs.pop("copts", []))
+    kwargs["cxxopts"] = cc_common.get_cxxopts(kwargs.pop("cxxopts", []))
+    kwargs["linkopts"] = cc_common.get_linkopts(kwargs.pop("linkopts", []))
+    kwargs["features"] = cc_common.get_features(kwargs.pop("features", []))
 
     test_targets = []
 
@@ -83,16 +87,7 @@ def _multi_app_impl(name, visibility, **kwargs):
     # Extract and filter deps for C++ targets (cc_library)
     # Android deps may include android_library targets, so filter to only CcInfo
     all_deps = kwargs.pop("deps", [])
-    if all_deps:
-        cc_deps_filter_name = "{}.cc_deps".format(name)
-        cc_deps_filter(
-            name = cc_deps_filter_name,
-            deps = all_deps,
-            visibility = ["//visibility:private"],
-        )
-        cc_deps = [":{}".format(cc_deps_filter_name)]
-    else:
-        cc_deps = []
+    kwargs["deps"] = multi_common.get_cc_deps(name, all_deps)
 
     ################################################################
     # Current target configuration platform binary
@@ -101,8 +96,6 @@ def _multi_app_impl(name, visibility, **kwargs):
 
         # cc_test does not have cc_binary-only attrs (output_licenses, etc.)
         host_kwargs = {k: v for k, v in kwargs.items() if not (is_test and k in _CC_BINARY_ONLY_ATTRS)}
-        host_kwargs["deps"] = cc_deps
-        
         host_cc_rule(
             name = "{}-host".format(name),
             tags = tags + ["host"],
@@ -116,15 +109,10 @@ def _multi_app_impl(name, visibility, **kwargs):
     # WASM specific targets with runner wrapper
     if "wasm" in enabled_platforms:
         wasm_kwargs = {k: v for k, v in kwargs.items() if k not in (_CC_TEST_ONLY_ATTRS if is_test else [])}
-        wasm_kwargs["deps"] = cc_deps
-        wasm_kwargs["features"] = [
-            # toolchain features
-            "exit_runtime",  # runner wrapper needs to exit runtime
-        ]
         cc_binary(
             name = "{}-wasm.tar".format(name),
             target_compatible_with = ["@platforms//cpu:wasm32"],
-            **wasm_kwargs
+            **cc_common.get_wasm_cc_kwargs(wasm_kwargs)
         )
 
         wasm_cc_binary(
@@ -149,7 +137,6 @@ def _multi_app_impl(name, visibility, **kwargs):
 
         droid_lib_exclude = _CC_BINARY_ONLY_ATTRS + (_CC_TEST_ONLY_ATTRS if is_test else [])
         droid_lib_kwargs = {k: v for k, v in kwargs.items() if k not in droid_lib_exclude}
-        droid_lib_kwargs["deps"] = cc_deps
         cc_library(
             name = "{}.lib".format(droid_name),
             target_compatible_with = ["@platforms//os:android"],
@@ -210,46 +197,6 @@ def _multi_app_impl(name, visibility, **kwargs):
             visibility = visibility,
             actual = select(select_dict),
         )
-
-# Common attributes shared between multi_app and multi_test
-_COMMON_ATTRS = {
-    "droid_manifest": attr.label(default = None),
-    "droid_srcs": attr.label_list(
-        allow_files = [".java", ".srcjar"],
-        default = [],
-    ),
-    "droid_deps": attr.label_list(
-        default = [_DROID_GLUE_LIB],
-        doc = "Labels for Android dependencies (i.e. glue libraries). Default is NativeActivity glue.",
-    ),
-    "droid_custom_package": attr.string(
-        doc = ("Java package for which java sources will be generated. " +
-               "By default the package is inferred from the directory where the BUILD file " +
-               "containing the rule is. You can specify a different package but this is " +
-               "highly discouraged since it can introduce classpath conflicts with other " +
-               "libraries that will only be detected at runtime."),
-    ),
-    "droid_assets": attr.label_list(
-        allow_files = True,
-        cfg = "target",
-        doc = "Asset files for Android platform. Passed to android_library.",
-    ),
-    "droid_assets_dir": attr.string(
-        doc = "Directory for Android assets. Passed to android_library.",
-    ),
-    "deps": attr.label_list(
-        providers = [
-            [CcInfo],
-            [JavaInfo],
-        ],
-        doc = "Dependencies: cc_library (CcInfo) or android_library/java_library (JavaInfo). All deps are passed to both cc_library and android_binary.",
-    ),
-    "platforms": attr.string_list(
-        default = ["host", "wasm", "droid"],
-        configurable = False,
-        doc = "List of platforms to build for. Valid values: 'host', 'wasm', 'droid'. Default: all platforms.",
-    ),
-}
 
 # https://bazel.build/extending/macros
 multi_app = macro(

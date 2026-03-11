@@ -11,17 +11,14 @@ load("@rules_android//rules:rules.bzl", "android_library")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")
 load("@rules_java//java/common:java_info.bzl", "JavaInfo")
-load(
-    ":filter_deps.bzl",
-    "cc_deps_filter",
-    "droid_top_manifest",
-)
+load(":filter_deps.bzl", "droid_top_manifest")
 load(
     ":multi_common.bzl",
+    "multi_common",
     "build_platform_select_dict",
     "validate_platforms",
 )
-load(":tx_common.bzl", "tx_cc")
+load(":cc_common.bzl", "cc_common")
 
 def _multi_lib_impl(name, visibility, **kwargs):
     # multi_library manages target_compatible_with itself
@@ -41,25 +38,14 @@ def _multi_lib_impl(name, visibility, **kwargs):
     # Validate platforms parameter
     validate_platforms(enabled_platforms)
 
-    kwargs["copts"] = tx_cc.get_copts(kwargs.pop("copts", []))
-    kwargs["cxxopts"] = tx_cc.get_cxxopts(kwargs.pop("cxxopts", []))
+    kwargs["copts"] = cc_common.get_copts(kwargs.pop("copts", []))
+    kwargs["cxxopts"] = cc_common.get_cxxopts(kwargs.pop("cxxopts", []))
+    kwargs["features"] = cc_common.get_features(kwargs.pop("features", []))
 
     ################################################################
-    # Extract and filter deps for C++ targets (cc_library)
-    # Android deps may include android_library targets, so filter to only CcInfo
+    # Filters deps to only those providing CcInfo
     all_deps = kwargs.pop("deps", [])
-    if all_deps:
-        cc_deps_filter_name = "{}.cc_deps".format(name)
-        cc_deps_filter(
-            name = cc_deps_filter_name,
-            deps = all_deps,
-        )
-        cc_deps = [":{}".format(cc_deps_filter_name)]
-    else:
-        cc_deps = []
-
-    # Update kwargs to use filtered deps
-    kwargs["deps"] = cc_deps
+    kwargs["deps"] = multi_common.get_cc_deps(name, all_deps)
 
     ################################################################
     # Host: exclude wasm and android
@@ -82,7 +68,7 @@ def _multi_lib_impl(name, visibility, **kwargs):
             name = "{}-wasm".format(name),
             visibility = visibility,
             target_compatible_with = ["@platforms//cpu:wasm32"],
-            **kwargs
+            **cc_common.get_wasm_cc_kwargs(kwargs)
         )
 
     ################################################################
@@ -143,27 +129,11 @@ def _multi_lib_impl(name, visibility, **kwargs):
 multi_lib = macro(
     inherit_attrs = native.cc_library,
     implementation = _multi_lib_impl,
-    attrs = {
-        "deps": attr.label_list(
-            providers = [
-                [CcInfo],
-                [JavaInfo],
-            ],
-            doc = "Dependencies: cc_library (CcInfo) or android_library/java_library (JavaInfo). Only CcInfo deps are passed to cc_library targets.",
-        ),
+    attrs = multi_common.get_common_attrs() | {
         "droid_library": attr.bool(
             default = False,
             configurable = False,
-            doc = "Set to True to create android_library wrapper for Android platform. Required when droid_srcs or droid_manifest is specified.",
-        ),
-        "droid_manifest": attr.label(
-            default = None,
-            doc = "Optional AndroidManifest.xml template for Android platform. If not provided, android_library is created without explicit manifest.",
-        ),
-        "droid_srcs": attr.label_list(
-            allow_files = [".java", ".srcjar"],
-            default = [],
-            doc = "Java/Kotlin source files for Android platform. Automatically creates android_library wrapping cc_library.",
+            doc = "Set to True to create android_library wrapper for Android platform. Required when droid_* attributes are specified.",
         ),
         "droid_exports": attr.label_list(
             providers = [
@@ -175,27 +145,6 @@ multi_lib = macro(
                 "direct dependencies of any rule that directly depends on the target with " +
                 "`exports`. The `exports` are not direct deps of the rule they belong to."
             ),
-        ),
-        "droid_custom_package": attr.string(
-            doc = ("Java package for which java sources will be generated. " +
-                   "By default the package is inferred from the directory where the BUILD file " +
-                   "containing the rule is. You can specify a different package but this is " +
-                   "highly discouraged since it can introduce classpath conflicts with other " +
-                   "libraries that will only be detected at runtime."),
-        ),
-        "droid_assets": attr.label_list(
-            allow_files = True,
-            cfg = "target",
-            default = [],
-            doc = "Asset files for Android platform. Passed to android_library.",
-        ),
-        "droid_assets_dir": attr.string(
-            doc = "Directory for Android assets. Passed to android_library.",
-        ),
-        "platforms": attr.string_list(
-            default = ["host", "wasm", "droid"],
-            configurable = False,
-            doc = "List of platforms to build for. Valid values: 'host', 'wasm', 'droid'. Default: all platforms.",
         ),
     },
 )
