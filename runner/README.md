@@ -52,13 +52,6 @@ sh_binary(
 )
 ```
 
-## Build Configuration
-
-The `BUILD.bazel` file exports:
-- `:runner` - exec_binary wrapper forcing runner to be built for exec platform
-- `:lib` - Python library with runner implementation
-- `sh_wrapper.cmd` - Exported file for use in other targets
-
 ## Use Cases
 
 1. **Running WASM binaries in tests** - Use runner with `--run_under` flag

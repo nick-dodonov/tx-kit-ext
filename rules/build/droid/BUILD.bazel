@@ -1,0 +1,32 @@
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_android//rules:rules.bzl", "android_library")
+
+exports_files([
+    "template.AndroidManifest.xml",
+])
+
+# Native bridge library is implemented with androidndk native_app_glue
+#   android_main() -> main() for reusing standard binary entry point.
+cc_library(
+    name = "droid_native",
+    srcs = glob(["src/cpp/**/*.cc"]),
+    hdrs = glob(["src/cpp/**/*.h"]),
+    deps = [
+        # DISABLED: in favor of self-implemented droid_glue.cc (TODO: remove when everything useful in native_app_glue will be known)
+        # "@androidndk//:native_app_glue"
+    ],
+    linkopts = [
+        "-llog",
+        "-landroid",
+        "-Wl,--undefined=ANativeActivity_onCreate",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+android_library(
+    name = "droid_glue",
+    srcs = ["src/java/tx/DroidActivity.java"],
+    manifest = "template.AndroidManifest.xml",
+    deps = [":droid_native"],
+    visibility = ["//visibility:public"],
+)

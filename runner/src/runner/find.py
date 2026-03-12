@@ -9,8 +9,6 @@ except ImportError:
     # for deps = [requirement("bazel-runfiles")]
     from runfiles import Runfiles
 
-from . import log
-
 
 class Finder:
     def __init__(self):
@@ -35,9 +33,3 @@ class Finder:
                     return rlocation_path, "<RUNFILES>"
 
         return None, "<NOT FOUND>"
-
-    def find_file_logged(self, file: Path) -> Path | None:
-        found_file, found_in = self.find_file(file)
-        if found_file:
-            log.trace(f"  Found: {found_file} # {found_in}")
-        return found_file

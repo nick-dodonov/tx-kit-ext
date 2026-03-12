@@ -1,0 +1,17 @@
+# Bazel output directories (symlinks)
+bazel-bin
+bazel-out
+bazel-testlogs
+bazel-tx-kit-ext
+external
+
+# Nested Bazel projects with their own output directories
+test/droid/ndk_example
+test/droid/tuturial
+
+# IDE and editor files
+.vscode
+.idea
+
+# OS files
+.DS_Store

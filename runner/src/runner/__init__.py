@@ -1,12 +1,13 @@
+import logging
 import os
 import re
 import sys
 
-from pathlib import Path
-
-from . import find, detect, cmd, wasm
-from .log import info, Fore, Style
+from . import find, detect, cmd, wasm, droid
+from . import context
 from .context import Platform, Options
+
+log = logging.getLogger(__name__)
 
 
 ENV_REGEXP_FILTERS = [
@@ -18,60 +19,55 @@ ENV_REGEXP_FILTERS = [
 ]
 
 
-_logged_header = False
-def log_header_once() -> None:
-    global _logged_header
-
-    if not _logged_header:
-        _logged_header = True
-        #TODO: also add stamp info
-        info(f"{Fore.CYAN}{Style.BRIGHT}⭐ Runner {Style.DIM}(Python {sys.version.split()[0]}, PID {os.getpid()}){Style.RESET_ALL}")
-
-
 def _log_process_info() -> None:
-    info(f"  {Style.DIM}CWD {os.getcwd()}{Style.RESET_ALL}")
+    log.debug("CWD %s", os.getcwd())
     for index, arg in enumerate(sys.argv):
-        info(f"  {Style.DIM}[{index}] {arg}{Style.RESET_ALL}")
+        log.debug("[%s] %s", index, arg)
     for key, value in sorted(os.environ.items()):
         if any(pattern.match(key) for pattern in ENV_REGEXP_FILTERS):
-            info(f"  {Style.DIM}{key}={value}{Style.RESET_ALL}")
-
-
-def _log_options(options: Options) -> None:
-    info(f"  {Style.DIM}{options}{Style.RESET_ALL}")
+            log.debug("  %s=%s", key, value)
 
 
 def _main(options: Options) -> int:
-    log_header_once()
     _log_process_info()
-    _log_options(options)
 
     finder = find.Finder()
-    found_file = finder.find_file_logged(options.file)
+    found_file, found_in = finder.find_file(options.file)
     if not found_file:
         raise FileNotFoundError(f"File not found: {options.file}")
+    log.debug(f"Found: {found_file} # {found_in}")
 
     platform = options.platform
     if platform == Platform.AUTO:
         platform = options.platform = detect.detect_platform(found_file)
+    log.debug("starting specific: %s", platform)
 
-    cmd_with_args = [str(found_file)] + options.args
     if platform == Platform.WASM:
         ctx = context.Context(
-            options=options, 
+            options=options,
             finder=finder,
             found_file=found_file,
         )
         command = wasm.WasmRunner(ctx).make_command()
+    elif platform == Platform.DROID:
+        ctx = context.Context(
+            options=options,
+            finder=finder,
+            found_file=found_file,
+        )
+        command = droid.DroidCommand(ctx.found_file, ctx.options.args)
     elif platform == Platform.EXEC:
-        command = cmd.Command(cmd=cmd_with_args)
+        command = cmd.RunCommand(
+            scope_prefix=f"[EXEC: {found_file.name}]",
+            cmd=[str(found_file)] + options.args)
     elif platform == Platform.PYTHON:
-        command = cmd.Command(cmd=["python3"] + cmd_with_args)
+        command = cmd.RunCommand(
+            scope_prefix=f"[PYTHON: {found_file.name}]",
+            cmd=["python3", str(found_file)] + options.args)
     else:
         raise ValueError(f"Unsupported platform: {platform}")
 
-    descr = Path(command.cmd[0]).name
-    return command.scoped_execute(f"[{platform.value.upper()}: {descr}]")
+    return command.scoped_execute()
 
 
 def start(options: Options) -> None:
@@ -79,7 +75,7 @@ def start(options: Options) -> None:
         exit_code = _main(options)
         sys.exit(exit_code)
     except Exception as e:
-        info(f"{Fore.RED}❌ {e}{Style.RESET_ALL}")
+        log.error("❌ %s", e)
         if isinstance(e, FileNotFoundError):
             sys.exit(1)
         raise

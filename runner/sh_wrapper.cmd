@@ -18,11 +18,11 @@ echo "## [$_basename] Shell ($(uname -sm) $SHELL)"
 echo -n "$_DIM"
 # print execution environment
 {
-    echo "  PWD $(pwd)"
-    echo "  [0] $0"
+    echo "## PWD $(pwd)"
+    echo "## [0] $0"
     index=1
     for arg in "$@"; do
-        echo "  [$index] $arg"
+        echo "## [$index] $arg"
         index=$((index + 1))
     done
     # print environment variables if set
@@ -31,10 +31,11 @@ echo -n "$_DIM"
         "BUILD_WORKSPACE_DIRECTORY"
         "RUNFILES_DIR"
         "RUNFILES_MANIFEST_FILE"
+        # "PATH"
     )
     for var in "${_ENV_VARS[@]}"; do
         if [ -n "${!var}" ]; then
-            echo "  $var=${!var}"
+            echo "## $var=${!var}"
         fi
     done
 }
@@ -43,23 +44,23 @@ echo -n "$_DIM"
 if [[ ! -d "${RUNFILES_DIR:-/dev/null}" && ! -f "${RUNFILES_MANIFEST_FILE:-/dev/null}" ]]; then
     if [[ -f "$0.runfiles_manifest" ]]; then
         export RUNFILES_MANIFEST_FILE="$0.runfiles_manifest"
-        echo "  export RUNFILES_MANIFEST_FILE=$RUNFILES_MANIFEST_FILE"
+        echo "## export RUNFILES_MANIFEST_FILE=$RUNFILES_MANIFEST_FILE"
     elif [[ -f "$0.runfiles/MANIFEST" ]]; then
         export RUNFILES_MANIFEST_FILE="$0.runfiles/MANIFEST"
-        echo "  export RUNFILES_MANIFEST_FILE=$RUNFILES_MANIFEST_FILE"
+        echo "## export RUNFILES_MANIFEST_FILE=$RUNFILES_MANIFEST_FILE"
     elif [[ -f "$0.runfiles/bazel_tools/tools/bash/runfiles/runfiles.bash" ]]; then
         export RUNFILES_DIR="$0.runfiles"
-        echo "  export RUNFILES_DIR=$RUNFILES_DIR"
+        echo "## export RUNFILES_DIR=$RUNFILES_DIR"
     fi
 fi
 # --- end runfiles initialization ---
 
 # Try to load arguments from .args file (prepend to provided args)
-ARGS_FILE="$0.args"
+ARGS_FILE="${0%.*}.args"
 if [ -f "$ARGS_FILE" ]; then
-    echo "  ## Loading: $ARGS_FILE"
+    echo "## Loading: $ARGS_FILE"
     read -r ARGS_LINE < "$ARGS_FILE"
-    echo "  ## Loaded: $ARGS_LINE"
+    echo "## Loaded: $ARGS_LINE"
     # Prepend file args before provided args
     set -- $ARGS_LINE "$@"
 fi
@@ -76,7 +77,7 @@ echo "## Execute: $@"
 # exec "$@"
 "$@"
 _ERR=$?
-echo "## [$_basename] Errorcode: $_ERR"
+echo "## [$_basename] Exitcode: $_ERR"
 exit $_ERR
 }
 
@@ -117,11 +118,11 @@ if defined ESC (
     set "_RESET=!ESC![0m"
 )
 
-echo !_DIM!  PWD %CD%
-echo   [0] %0
+echo !_DIM! ## PWD %CD%
+echo ## [0] %0
 set index=1
 for %%a in (%*) do (
-    echo   [!index!] %%a
+    echo ## [!index!] %%a
     set /a index+=1
 )
 REM Print environment variables if set
@@ -132,7 +133,7 @@ for %%v in (
     RUNFILES_MANIFEST_FILE
 ) do (
     if defined %%v (
-        call echo   %%v=%%!%%v!%%
+        call echo ## %%v=%%!%%v!%%
     )
 )
 
@@ -154,18 +155,18 @@ REM --- begin runfiles initialization ---
 if not defined RUNFILES_DIR (
     if exist "%~f0.runfiles" (
         set "RUNFILES_DIR=%~f0.runfiles"
-        echo   set RUNFILES_DIR=!RUNFILES_DIR!
+        echo ## set RUNFILES_DIR=!RUNFILES_DIR!
     )
 )
 REM --- end runfiles initialization ---
 
 REM Try to load arguments from .args file (prepend to provided args)
-set "ARGS_FILE=%~f0.args"
+set "ARGS_FILE=%~dpn0.args"
 set "ARGS_LINE="
 if exist "!ARGS_FILE!" (
-    echo   ## Loading: !ARGS_FILE!
+    echo ## Loading: !ARGS_FILE!
     set /p ARGS_LINE=<"!ARGS_FILE!"
-    echo   ## Loaded: !ARGS_LINE!
+    echo ## Loaded: !ARGS_LINE!
 )
 
 REM Combine file args with provided args
@@ -188,5 +189,5 @@ set "FULL_ARGS=!FULL_ARGS:/=\!"
 echo !_RESET!## Execute: !FULL_ARGS!
 cmd /c !FULL_ARGS!
 set _ERR=!ERRORLEVEL!
-echo ## [%_basename%] Errorcode: !_ERR!
+echo ## [%_basename%] Exitcode: !_ERR!
 exit /b !_ERR!

@@ -2,6 +2,7 @@
 /bazel-*
 MODULE.bazel.lock
 .*.bazelrc
+/external
 
 # Native debugging customizations
 /.lldb*

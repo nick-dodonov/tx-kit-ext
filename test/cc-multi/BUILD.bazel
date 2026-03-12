@@ -1,0 +1,30 @@
+load("//rules/build:multi_lib.bzl", "multi_lib")
+load("//rules/build:multi_app.bzl", "multi_app", "multi_test")
+
+multi_lib(
+    name = "lib",
+    srcs = ["cc_lib.cpp"],
+    hdrs = ["cc_lib.h"],
+    data = ["data.txt"],
+    visibility = ["//visibility:private"],
+)
+
+multi_app(
+    name = "app",
+    srcs = ["cc_bin.cpp"],
+    deps = [":lib"],
+)
+
+multi_test(
+    name = "tst",
+    srcs = ["cc_tst.cpp"],
+    deps = [
+        ":lib",
+        "@googletest//:gtest_main",
+    ],
+)
+
+alias(
+    name = "cc",
+    actual = ":app",
+)

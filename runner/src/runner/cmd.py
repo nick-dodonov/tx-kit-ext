@@ -1,58 +1,100 @@
+import logging
 import os
-import subprocess
 import shlex
+import subprocess
+import sys
+from abc import ABC, abstractmethod
+from pathlib import Path
 
-from dataclasses import dataclass
-from runner.log import *
+from .log import Fore, Style
 
-@dataclass
-class Command:
-    cmd: list[str]
-    cwd: str | None = None
-    cwd_descr: str | None = None
+__all__ = ["Command", "RunCommand"]
+
+log = logging.getLogger(__name__)
+
+
+class Command(ABC):
+    """Base interface for executable commands."""
+
+    def __init__(self, scope_prefix: str):
+        self.scope_prefix = scope_prefix
+
+    def scoped_execute(self) -> int:
+        Command._log_delimiter_header(self.scope_prefix)
+        try:
+            returncode = self.execute()
+            Command._log_delimiter_finish(self.scope_prefix, returncode)
+            return returncode
+        except Exception as e:
+            Command._log_delimiter_finish(self.scope_prefix, e)
+            return 1
+
+    @abstractmethod
+    def execute(self) -> int:
+        """Execute and return exit code."""
+        ...
 
     @staticmethod
     def _log_delimiter(symbol: str, color: str, length: int = 64) -> None:
-        info(f"{color}{symbol * length}{Style.RESET_ALL}")
+        print(f"{color}{symbol * length}{Style.RESET_ALL}", flush=True)
 
-    def scoped_execute(self, scope_prefix: str) -> int:
+    @staticmethod
+    def _log_delimiter_header(scope_prefix: str) -> None:
+        log.info(f"{Fore.CYAN}➡️  {scope_prefix}{Style.RESET_ALL}")
+
+    @staticmethod
+    def _log_delimiter_start() -> None:
+        Command._log_delimiter(">", Fore.LIGHTBLUE_EX)
+
+    @staticmethod
+    def _log_delimiter_finish(scope_prefix: str, exit_code: int | Exception) -> None:
+        Command._log_delimiter("<", Fore.LIGHTBLUE_EX)
+        finish_prefix = f"{Fore.CYAN}⬅️  {scope_prefix}{Style.RESET_ALL}"
+        if exit_code == 0:
+            log.info(f"{finish_prefix} {Fore.GREEN}✅ Success: {exit_code}{Style.RESET_ALL}")
+        else:
+            log.error(f"{finish_prefix} {Fore.RED}❌ Error: {exit_code}{Style.RESET_ALL}")
+
+
+class RunCommand(Command):
+    """Command that runs via subprocess."""
+
+    def __init__(
+        self,
+        scope_prefix: str,
+        cmd: list[str],
+        cwd: str | None = None,
+        cwd_descr: str | None = None,
+    ):
+        Command.__init__(self, scope_prefix)
+        self.scope_prefix = scope_prefix
+        self.cmd = cmd
+        self.cwd = cwd
+        self.cwd_descr = cwd_descr
+
+    @property
+    def descr(self) -> str:
+        return Path(self.cmd[0]).name
+
+    def execute(self) -> int:
         cwd = self.cwd or os.getcwd()
         cmd_str = shlex.join(self.cmd)
-        info(f"{Fore.CYAN}➡️  {scope_prefix}{Style.RESET_ALL}") # ⬇️
         cwd_descr = self.cwd_descr if self.cwd_descr else "CWD" if not self.cwd else None
-        info(f"  {Style.DIM}cd {cwd}{f' # {cwd_descr}' if cwd_descr else ''}{Style.RESET_ALL}")
-        info(f"  {Style.DIM}{cmd_str}{Style.RESET_ALL}")
-        self._log_delimiter('>', Fore.LIGHTBLUE_EX)
+        log.debug("cd %s%s", cwd, f" # {cwd_descr}" if cwd_descr else "")
+        log.debug("%s", cmd_str)
 
+        Command._log_delimiter_start()
         try:
             env = os.environ.copy()
-            # def clean_env_var(env, var_name: str):
-            #     if var_name in env:
-            #         del env[var_name]
-            # clean_env_var(env, "PYTHONPATH")
-            # clean_env_var(env, "RUNFILES_DIR")
-            # clean_env_var(env, "RUNFILES_MANIFEST_FILE")
-
-            # On Windows execute the command through the shell (emrun is a batch file)
             shell = sys.platform == "win32"
             result = subprocess.run(self.cmd, cwd=self.cwd, check=False, env=env, shell=shell)
-            exit_code = result.returncode
+            return result.returncode
         except FileNotFoundError as e:
-            info(f"{Fore.RED}❌ Execute not found: {e}{Style.RESET_ALL}")
-            info(f"Error: {e}")
-            exit_code = 127
+            log.error("❌ Execute not found: %s", e)
+            return 127
         except KeyboardInterrupt:
-            info(f"\n{Fore.YELLOW}⚠️ Execute interrupted{Style.RESET_ALL}")
-            exit_code = 130
+            log.warning("\n⚠️ Execute interrupted")
+            return 130
         except Exception as e:
-            info(f"{Fore.RED}❌ Execute error: {e}{Style.RESET_ALL}")
-            exit_code = 1
-
-        self._log_delimiter('<', Fore.LIGHTBLUE_EX)
-        finish_prefix = f"{Fore.CYAN}⬅️  {scope_prefix}{Style.RESET_ALL}" # ⬆️ 🏁
-        if exit_code == 0:
-            info(f"{finish_prefix} {Fore.GREEN}✅ Success: {exit_code}{Style.RESET_ALL}")
-        else:
-            info(f"{finish_prefix} {Fore.RED}❌ Error: {exit_code}{Style.RESET_ALL}")
-
-        return exit_code
+            log.error("❌ Execute error: %s", e)
+            return 1

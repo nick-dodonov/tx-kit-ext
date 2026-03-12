@@ -1,0 +1,44 @@
+load("@rules_android//rules:rules.bzl", "android_binary", "android_library")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+
+package(
+    default_visibility = ["//test/droid/app:__subpackages__"],
+)
+
+android_binary(
+    name = "app",
+    manifest = "main/AndroidManifest.xml",
+    deps = [
+        ":applib",
+    ],
+)
+
+android_library(
+    name = "applib",
+    manifest = "main/AndroidManifest.xml",
+    srcs = glob([
+        "main/java/com/app/*.java"
+    ]),
+    resource_files = glob([
+        "main/res/**"
+    ]),
+    custom_package = "",
+    deps = [
+        ":jni",
+    ],
+)
+
+cc_library(
+    name = "jni",
+    srcs = ["main/cpp/jni.cc"],
+    deps = [":jni_dep"],
+)
+
+cc_library(
+    name = "jni_dep",
+    srcs = ["main/cpp/jni_dep.cc"],
+    hdrs = ["main/cpp/jni_dep.h"],
+    linkopts = [
+        "-llog"
+    ],
+)

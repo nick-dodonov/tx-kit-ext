@@ -1,4 +1,5 @@
 {
     //TODO: find/report issue, anyway IntelliSence by Pylance extension not recognizing settings in multi-root workspace
-    "python.analysis.stubPath": "${workspaceFolder}/typings"
+    "python.analysis.stubPath": "${workspaceFolder}/typings",
+    "cursorpyright.analysis.stubPath": "${workspaceFolder}/typings"
 }

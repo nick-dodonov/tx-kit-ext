@@ -1,5 +1,7 @@
 # Hybrid Bash+Batch In One File
 
+> :warning: NOTE the comment in header of `sh_wrapper.sh`
+
 Allows to run `sh_binary` on Windows even when specific build platform is selected _(e.g. `--platforms=@emsdk//:platform_wasm`)_.
 In that case .exe wrapper isn't produced by rule implementation.
 

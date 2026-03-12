@@ -1,0 +1,26 @@
+"""Bazel module for shared extensions, tools and rules."""
+
+module(
+    name = "droid-tutorial",
+    version = "0.0.0",
+)
+
+# Android build support
+#   https://bazel.build/start/android-app
+#   https://bazel.build/docs/android-ndk
+#   https://github.com/bazelbuild/examples/tree/main/android
+bazel_dep(name = "rules_android", version = "0.7.1")
+
+# Android SDK at the path referenced by the ANDROID_HOME and
+#   automatically detect the highest API level and the latest version of build tools installed
+remote_android_extensions = use_extension(
+    "@rules_android//bzlmod_extensions:android_extensions.bzl",
+    "remote_android_tools_extensions",
+)
+use_repo(remote_android_extensions, "android_tools")
+
+android_sdk_repository_extension = use_extension(
+    "@rules_android//rules/android_sdk_repository:rule.bzl",
+    "android_sdk_repository_extension",
+)
+use_repo(android_sdk_repository_extension, "androidsdk")
