@@ -1,7 +1,7 @@
 '''
 Sample usage:
-load("@tx-kit-ext//rules/build:multi_app.bzl", "multi_app")
-load("@tx-kit-ext//rules/build:wasm_helper.bzl", "wasm_preload_params")
+load("@tx-kit-ext//rules:multi_app.bzl", "multi_app")
+load("@tx-kit-ext//rules:wasm_helper.bzl", "wasm_preload_params")
 
 wasm_preload_params(
     name = "preload_params",

@@ -4,6 +4,7 @@ bazel-out
 bazel-testlogs
 bazel-tx-kit-ext
 external
+local-registry
 
 # Nested Bazel projects with their own output directories
 test/droid/ndk_example

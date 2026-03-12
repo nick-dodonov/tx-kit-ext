@@ -3,6 +3,7 @@
 MODULE.bazel.lock
 .*.bazelrc
 /external
+/local-registry
 
 # Native debugging customizations
 /.lldb*

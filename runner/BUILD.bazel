@@ -1,6 +1,6 @@
 load("@rules_python//python:defs.bzl", "py_binary", "py_library")
 load("@pypi//:requirements.bzl", "requirement")
-load("//rules/build:exec_binary.bzl", "exec_binary")
+load("//rules:exec_binary.bzl", "exec_binary")
 
 py_library(
     name = "lib",

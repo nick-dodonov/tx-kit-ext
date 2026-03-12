@@ -1,5 +1,5 @@
-load("//rules/build:multi_lib.bzl", "multi_lib")
-load("//rules/build:multi_app.bzl", "multi_app", "multi_test")
+load("//rules:multi_lib.bzl", "multi_lib")
+load("//rules:multi_app.bzl", "multi_app", "multi_test")
 
 multi_lib(
     name = "lib",
