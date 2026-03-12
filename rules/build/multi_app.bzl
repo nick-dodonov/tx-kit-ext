@@ -65,6 +65,7 @@ def _multi_app_impl(name, visibility, **kwargs):
     droid_custom_package = kwargs.pop("droid_custom_package", None)
     droid_assets = kwargs.pop("droid_assets", [])
     droid_assets_dir = kwargs.pop("droid_assets_dir", None)
+    droid_resource_files = kwargs.pop("droid_resource_files", [])
 
     enabled_platforms = kwargs.pop("platforms", ["host", "wasm", "droid"])
 
@@ -162,6 +163,7 @@ def _multi_app_impl(name, visibility, **kwargs):
             custom_package = droid_custom_package,
             assets = droid_assets,
             assets_dir = droid_assets_dir,
+            resource_files = droid_resource_files,
             deps = droid_deps,
             manifest = droid_manifest,
             manifest_values = {

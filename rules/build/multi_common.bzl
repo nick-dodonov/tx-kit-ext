@@ -42,10 +42,24 @@ _DROID_COMMON_ATTRS = dict(
     droid_assets = attr.label_list(
         allow_files = True,
         cfg = "target",
-        doc = "Asset files for Android platform. Passed to android_library.",
+        doc = ("The list of assets to be packaged. This is typically a glob of " +
+                "all files under the assets directory. You can also reference " +
+                "other rules (any rule that produces files) or exported files in " +
+                "the other packages, as long as all those files are under the " +
+                "assets_dir directory in the corresponding package."),
     ),
     droid_assets_dir = attr.string(
-        doc = "Directory for Android assets. Passed to android_library.",
+        doc = ("The string giving the path to the files in assets. " +
+                "The pair assets and assets_dir describe packaged assets and either both " +
+                "attributes should be provided or none of them."),
+    ),
+    droid_resource_files = attr.label_list(
+        allow_files = True,
+        doc = ("The list of resources to be packaged. This " +
+                "is typically a glob of all files under the res directory. Generated files " +
+                "(from genrules) can be referenced by Label here as well. The only " +
+                "restriction is that the generated outputs must be under the same \"res\" " +
+                "directory as any other resource files that are included."),
     ),
 )
 

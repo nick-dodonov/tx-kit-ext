@@ -25,6 +25,8 @@ def _multi_lib_impl(name, visibility, **kwargs):
     if kwargs.pop("target_compatible_with", None) != None:
         fail("multi_library does not support target_compatible_with attribute")
 
+    enabled_platforms = kwargs.pop("platforms", ["host", "wasm", "droid"])
+
     # Extract Android-specific attributes
     droid_library = kwargs.pop("droid_library", False)
     droid_manifest = kwargs.pop("droid_manifest", None)
@@ -33,7 +35,12 @@ def _multi_lib_impl(name, visibility, **kwargs):
     droid_custom_package = kwargs.pop("droid_custom_package", None)
     droid_assets = kwargs.pop("droid_assets", [])
     droid_assets_dir = kwargs.pop("droid_assets_dir", None)
-    enabled_platforms = kwargs.pop("platforms", ["host", "wasm", "droid"])
+    droid_resource_files = kwargs.pop("droid_resource_files", [])
+
+    tags = kwargs.pop("tags", [])
+    if tags == None:
+        tags = []
+    tags = tags + ["multi"]  # Tag to identify multi_app/test targets in test filters, etc.
 
     # Validate platforms parameter
     validate_platforms(enabled_platforms)
@@ -52,6 +59,7 @@ def _multi_lib_impl(name, visibility, **kwargs):
     if "host" in enabled_platforms:
         cc_library(
             name = "{}-host".format(name),
+            tags = tags + ["host"],
             target_compatible_with = select({
                 "@platforms//cpu:wasm32": ["@platforms//:incompatible"],
                 "@platforms//os:android": ["@platforms//:incompatible"],
@@ -66,6 +74,7 @@ def _multi_lib_impl(name, visibility, **kwargs):
     if "wasm" in enabled_platforms:
         cc_library(
             name = "{}-wasm".format(name),
+            tags = tags + ["wasm"],
             visibility = visibility,
             target_compatible_with = ["@platforms//cpu:wasm32"],
             **cc_common.get_wasm_cc_kwargs(kwargs)
@@ -97,11 +106,13 @@ def _multi_lib_impl(name, visibility, **kwargs):
 
             android_library(
                 name = droid_name,
+                tags = tags + ["droid"],
                 srcs = droid_srcs,
                 manifest = droid_manifest,
                 custom_package = droid_custom_package,
                 assets = droid_assets,
                 assets_dir = droid_assets_dir,
+                resource_files = droid_resource_files,
                 deps = droid_deps,
                 exports = droid_exports,
                 visibility = visibility,
@@ -111,6 +122,7 @@ def _multi_lib_impl(name, visibility, **kwargs):
             # No Java sources: create cc_library with main name (backward compatible)
             cc_library(
                 name = droid_name,
+                tags = tags + ["droid"],
                 visibility = visibility,
                 target_compatible_with = ["@platforms//os:android"],
                 **kwargs
