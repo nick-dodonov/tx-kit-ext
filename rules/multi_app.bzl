@@ -15,6 +15,11 @@ load(
 )
 load(":run_wrapper_cmd.bzl", "run_wrapper_cmd")
 load(":cc_common.bzl", "cc_common")
+load(
+    ":embedded.bzl",
+    "embedded_files",
+    "host_embedded_data",
+)
 
 # Android library to wrap execution of cc_library, allowing to declare simple main() function in C++ app
 _DROID_GLUE_LIB = Label("//rules/droid:droid_glue")
@@ -93,15 +98,21 @@ def _multi_app_impl(name, visibility, **kwargs):
     ################################################################
     # Current target configuration platform binary
     if "host" in enabled_platforms:
-        host_cc_rule = cc_test if is_test else cc_binary
+        host_embedded_data(
+            name = "{}-host.data".format(name),
+            deps = all_deps,  # pass deps to be able to collect transitive embedded files
+        )
 
         # cc_test does not have cc_binary-only attrs (output_licenses, etc.)
         host_kwargs = {k: v for k, v in kwargs.items() if not (is_test and k in _CC_BINARY_ONLY_ATTRS)}
+        host_data = [":{}-host.data".format(name)] + host_kwargs.pop("data", [])  # Include embedded files in runfiles for host
+        host_cc_rule = cc_test if is_test else cc_binary
         host_cc_rule(
             name = "{}-host".format(name),
             tags = tags + ["host"],
             target_compatible_with = HOST_CONSTRAINTS,
             visibility = visibility,
+            data = host_data,
             **host_kwargs
         )
         test_targets.append(":{}-host".format(name))
