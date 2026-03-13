@@ -1,5 +1,6 @@
 """Common utilities shared between multi_app and multi_lib build rules."""
 load(":filter_deps.bzl", "cc_deps_filter")
+load(":embedded.bzl", "EmbeddedFilesInfo")
 load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")
 load("@rules_java//java/common:java_info.bzl", "JavaInfo")
 
@@ -18,6 +19,11 @@ _COMMON_ATTRS = dict(
             [JavaInfo],
         ],
         doc = "Dependencies: cc_library (CcInfo) or android_library/java_library (JavaInfo). All deps are passed to both cc_library and android_binary.",
+    ),
+    embedded_data = attr.label_list(
+        providers = [EmbeddedFilesInfo],
+        default = [],
+        doc = "Embedded data info that provide files to be embedded in the app (with different ways depending on target platform).",
     ),
 )
 

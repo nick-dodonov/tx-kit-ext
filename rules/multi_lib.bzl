@@ -19,6 +19,11 @@ load(
     "validate_platforms",
 )
 load(":cc_common.bzl", "cc_common")
+load(
+    "@tx-kit-ext//rules:embedded.bzl",
+    "droid_embedded_assets",
+    "wasm_embedded_linkopts_params",
+)
 
 def _multi_lib_impl(name, visibility, **kwargs):
     # multi_library manages target_compatible_with itself
@@ -26,6 +31,7 @@ def _multi_lib_impl(name, visibility, **kwargs):
         fail("multi_library does not support target_compatible_with attribute")
 
     enabled_platforms = kwargs.pop("platforms", ["host", "wasm", "droid"])
+    embedded_data = kwargs.pop("embedded_data", None)
 
     # Extract Android-specific attributes
     droid_library = kwargs.pop("droid_library", False)
@@ -57,6 +63,10 @@ def _multi_lib_impl(name, visibility, **kwargs):
     ################################################################
     # Host: exclude wasm and android
     if "host" in enabled_platforms:
+        host_kwargs = {k: v for k, v in kwargs.items()}
+        host_data = host_kwargs.pop("data") or []  # Include embedded files in runfiles for host
+        host_data = host_data + embedded_data
+
         cc_library(
             name = "{}-host".format(name),
             tags = tags + ["host"],
@@ -66,18 +76,33 @@ def _multi_lib_impl(name, visibility, **kwargs):
                 "//conditions:default": [],
             }),
             visibility = visibility,
-            **kwargs
+            data = host_data,
+            **host_kwargs
         )
 
     ################################################################
     # WASM
     if "wasm" in enabled_platforms:
+        wasm_embedded_linkopts_params(
+            name = "{}-wasm.params".format(name),
+            embedded_data = embedded_data,
+        )
+
+        wasm_kwargs = cc_common.get_wasm_cc_kwargs(kwargs)
+        additional_linker_inputs = wasm_kwargs.pop("additional_linker_inputs") or []
+        additional_linker_inputs = additional_linker_inputs + [":{}-wasm.params".format(name)]
+
+        wasm_linkopts = wasm_kwargs.pop("linkopts") or []
+        wasm_linkopts = wasm_linkopts + ["@$(execpaths :{}-wasm.params)".format(name)]
+
         cc_library(
             name = "{}-wasm".format(name),
             tags = tags + ["wasm"],
             visibility = visibility,
             target_compatible_with = ["@platforms//cpu:wasm32"],
-            **cc_common.get_wasm_cc_kwargs(kwargs)
+            additional_linker_inputs = additional_linker_inputs,
+            linkopts = wasm_linkopts,
+            **wasm_kwargs
         )
 
     ################################################################
@@ -103,6 +128,14 @@ def _multi_lib_impl(name, visibility, **kwargs):
                     deps = droid_deps,
                 )
                 droid_manifest = ":{}.manifest".format(droid_name)
+
+            #TODO: add assets_dir to droid_embedded_assets rule allowing to setup it
+            droid_assets_dir = "assets"
+            droid_embedded_assets(
+                name = "{}.assets".format(droid_name),
+                embedded_data = embedded_data,
+            )
+            droid_assets = droid_assets + [":{}.assets".format(droid_name)]
 
             android_library(
                 name = droid_name,

@@ -64,6 +64,9 @@ def _multi_app_impl(name, visibility, **kwargs):
 
     is_test = kwargs.pop("is_test")
 
+    enabled_platforms = kwargs.pop("platforms", ["host", "wasm", "droid"])
+    embedded_data = kwargs.pop("embedded_data", None)
+
     droid_manifest = kwargs.pop("droid_manifest", None)
     droid_srcs = kwargs.pop("droid_srcs", [])
     droid_deps = kwargs.pop("droid_deps")
@@ -71,8 +74,6 @@ def _multi_app_impl(name, visibility, **kwargs):
     droid_assets = kwargs.pop("droid_assets", [])
     droid_assets_dir = kwargs.pop("droid_assets_dir", None)
     droid_resource_files = kwargs.pop("droid_resource_files", [])
-
-    enabled_platforms = kwargs.pop("platforms", ["host", "wasm", "droid"])
 
     tags = kwargs.pop("tags", [])
     if tags == None:
@@ -100,12 +101,15 @@ def _multi_app_impl(name, visibility, **kwargs):
     if "host" in enabled_platforms:
         host_embedded_data(
             name = "{}-host.data".format(name),
+            embedded_data = embedded_data,
             deps = all_deps,  # pass deps to be able to collect transitive embedded files
         )
 
         # cc_test does not have cc_binary-only attrs (output_licenses, etc.)
         host_kwargs = {k: v for k, v in kwargs.items() if not (is_test and k in _CC_BINARY_ONLY_ATTRS)}
-        host_data = [":{}-host.data".format(name)] + host_kwargs.pop("data", [])  # Include embedded files in runfiles for host
+        host_data = host_kwargs.pop("data") or []
+        host_data = [":{}-host.data".format(name)] + host_data  # Include embedded files in runfiles for host
+
         host_cc_rule = cc_test if is_test else cc_binary
         host_cc_rule(
             name = "{}-host".format(name),

@@ -11,7 +11,7 @@ Embedded files usage:
 """
 load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")
 
-_LOG_ENABLED = True
+_LOG_ENABLED = False
 def _log(message):
     """Logs a warning message during the build."""
     if _LOG_ENABLED:
@@ -89,8 +89,9 @@ def _host_embedded_data_impl(ctx):
             all_files_to_dir.update(dep[EmbeddedFilesInfo].files_to_dir)
 
     # then update with embedded files from current target if present
-    if ctx.attr.embedded != None:
-        all_files_to_dir.update(ctx.attr.embedded[EmbeddedFilesInfo].files_to_dir)
+    embedded_data = ctx.attr.embedded_data
+    for embedded in embedded_data:
+        all_files_to_dir.update(embedded[EmbeddedFilesInfo].files_to_dir)
 
     result_files = []
     for source, target_dir in all_files_to_dir.items():
@@ -114,7 +115,7 @@ def _host_embedded_data_impl(ctx):
 host_embedded_data = rule(
     implementation = _host_embedded_data_impl,
     attrs = {
-        "embedded": attr.label(
+        "embedded_data": attr.label_list(
             mandatory = False,
             providers = [EmbeddedFilesInfo],
         ),
@@ -132,36 +133,40 @@ def _droid_embedded_assets_impl(ctx):
     # android_library with assets_dir="assets" will strip the "assets/" prefix when packaging
 
     outputs = []
-    files_to_dir = ctx.attr.embedded[EmbeddedFilesInfo].files_to_dir
-    for source, target_dir in files_to_dir.items():
-        # value is the relative path within assets (e.g., "data/fonts")
-        # We need to create files at "assets/data/fonts/..." for android_library
-        _log("entry: {} -> {}".format(source, target_dir))
-        output_dir = "assets/{}".format(target_dir)  # e.g., "assets/data/fonts"
-        _log("  output_dir: {}".format(output_dir))
-        _log("  source files count: {}".format(len(source.files.to_list())))
 
-        for source_file in source.files.to_list():
-            _log("  processing file: {}".format(source_file))
-            _log("    file.path: {} is_directory={} is_source={} is_symlink={}".format(source_file.path, source_file.is_directory, source_file.is_source, source_file.is_symlink))
-            _log("    file.short_path: {}".format(source_file.short_path))
-            # _log("    file.basename: {}".format(source_file.basename))
-            # _log("    file.extension: {}".format(source_file.extension))
-            # _log("    file.dirname: {}".format(source_file.dirname))
+    embedded_data = ctx.attr.embedded_data
+    for embedded in embedded_data:
+        _log("item: {}".format(embedded))
+        files_to_dir = embedded[EmbeddedFilesInfo].files_to_dir
+        for source, target_dir in files_to_dir.items():
+            # value is the relative path within assets (e.g., "data/fonts")
+            # We need to create files at "assets/data/fonts/..." for android_library
+            _log("  entry: {} -> {}".format(source, target_dir))
+            output_dir = "assets/{}".format(target_dir)  # e.g., "assets/data/fonts"
+            # _log("  output_dir: {}".format(output_dir))
+            # _log("  source files count: {}".format(len(source.files.to_list())))
 
-            # Declare output file in the assets structure
-            output_path = "{}/{}".format(output_dir, source_file.basename)
-            output_file = ctx.actions.declare_file(output_path)
-            _log("    output_file.path: {}".format(output_file.path))
-            _log("    output_file.short_path: {}".format(output_file.short_path))
+            for source_file in source.files.to_list():
+                # _log("  processing file: {}".format(source_file))
+                # _log("    file.path: {} is_directory={} is_source={} is_symlink={}".format(source_file.path, source_file.is_directory, source_file.is_source, source_file.is_symlink))
+                # _log("    file.short_path: {}".format(source_file.short_path))
+                # _log("    file.basename: {}".format(source_file.basename))
+                # _log("    file.extension: {}".format(source_file.extension))
+                # _log("    file.dirname: {}".format(source_file.dirname))
 
-            # Create symlink according to Bazel docs: output first, then target_file
-            ctx.actions.symlink(
-                output = output_file,
-                target_file = source_file,
-            )
-            _log("    symlink: {} -> {}".format(output_file.short_path, source_file.short_path))
-            outputs.append(output_file)
+                # Declare output file in the assets structure
+                output_path = "{}/{}".format(output_dir, source_file.basename)
+                output_file = ctx.actions.declare_file(output_path)
+                # _log("    output_file.path: {}".format(output_file.path))
+                # _log("    output_file.short_path: {}".format(output_file.short_path))
+
+                # Create symlink according to Bazel docs: output first, then target_file
+                _log("    symlink: {} -> {}".format(output_file.short_path, source_file.short_path))
+                ctx.actions.symlink(
+                    output = output_file,
+                    target_file = source_file,
+                )
+                outputs.append(output_file)
     
     # _log("=== droid_embedded_assets ({}) summary ===".format(ctx.label))
     # _log("Total output files count: {}".format(len(outputs)))
@@ -174,7 +179,7 @@ def _droid_embedded_assets_impl(ctx):
 droid_embedded_assets = rule(
     implementation = _droid_embedded_assets_impl,
     attrs = {
-        "embedded": attr.label(
+        "embedded_data": attr.label_list(
             providers = [EmbeddedFilesInfo],
         ),
     },
@@ -183,17 +188,21 @@ droid_embedded_assets = rule(
 ################################################################
 def _wasm_embedded_linkopts_params_impl(ctx):
     _log("=== wasm_embedded_linkopts_params processing {}".format(ctx.label))
-    param_file = ctx.actions.declare_file(ctx.label.name + ".txt")
 
-    files_to_dir = ctx.attr.assets[EmbeddedFilesInfo].files_to_dir
+    param_file = ctx.actions.declare_file(ctx.label.name + ".txt")
     linkopts = []
-    for source, target_dir in files_to_dir.items():
-        _log("entry: {} -> {}".format(source, target_dir))
-        for source_file in source.files.to_list():
-            target_path = "{}/{}".format(target_dir, source_file.basename)  # e.g., "data/fonts/Roboto-Regular.ttf"
-            _log("  adding --preload-file option {} -> {}".format(source_file.path, target_path))
-            # Format: --preload-file physical_path@path_in_wasm
-            linkopts.append("--preload-file %s@/%s\n" % (source_file.path, target_path))
+
+    embedded_data = ctx.attr.embedded_data
+    for embedded in embedded_data:
+        _log("item: {}".format(embedded))
+        files_to_dir = embedded[EmbeddedFilesInfo].files_to_dir
+        for source, target_dir in files_to_dir.items():
+            _log("  entry: {} -> {}".format(source, target_dir))
+            for source_file in source.files.to_list():
+                target_path = "{}/{}".format(target_dir, source_file.basename)  # e.g., "data/fonts/Roboto-Regular.ttf"
+                _log("    adding --preload-file {} -> {}".format(source_file.path, target_path))
+                # Format: --preload-file physical_path@path_in_wasm
+                linkopts.append("--preload-file %s@/%s\n" % (source_file.path, target_path))
 
     ctx.actions.write(param_file, "".join(linkopts))
     return [
@@ -205,7 +214,7 @@ def _wasm_embedded_linkopts_params_impl(ctx):
 wasm_embedded_linkopts_params = rule(
     implementation = _wasm_embedded_linkopts_params_impl,
     attrs = {
-        "assets": attr.label(
+        "embedded_data": attr.label_list(
             providers = [EmbeddedFilesInfo],
         ),
     },
