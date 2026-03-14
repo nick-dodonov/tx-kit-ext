@@ -99,6 +99,12 @@ android_ndk_repository_extension = use_extension(
     "@rules_android_ndk//:extension.bzl", 
     "android_ndk_repository_extension"
 )
+# android_ndk_repository_extension.configure(
+#     # Optional (otherwise ANDROID_NDK_HOME)
+#     path = "/Users/rix/Library/Android/sdk/ndk/29.0.14206865",
+#     # Optional (ctx.attr.api_level or 31 in rules.bzl)
+#     api_level = 31
+# )
 use_repo(android_ndk_repository_extension, "androidndk")
 
 register_toolchains("@androidndk//:all")

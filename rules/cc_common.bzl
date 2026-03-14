@@ -65,8 +65,10 @@ def _get_default_linkopts():
             # # # Disable threading and shared memory completely
             # # "-sUSE_PTHREADS=0",
             # # "-sPROXY_TO_PTHREAD=0",
-            # "-pthread",
-            # "-sPTHREAD_POOL_SIZE=4",
+
+            # "-pthread",  # use_pthreads feature already used
+            "-sPTHREAD_POOL_SIZE=2",  # Workaround for "Tried to spawn a new thread, but the thread pool is exhausted."
+            #"-sPTHREAD_POOL_SIZE_STRICT=2",  # "If you want to throw an explicit error instead of the risk of deadlocking in those cases."
 
             # Workaround for "emcc: warning: running limited binaryen optimizations because DWARF info requested (or indirectly required) [-Wlimited-postlink-optimizations]"
             "-Wno-limited-postlink-optimizations"
