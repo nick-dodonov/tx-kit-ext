@@ -1,8 +1,9 @@
 """Common utilities shared between multi_app and multi_lib build rules."""
-load(":filter_deps.bzl", "cc_deps_filter")
-load(":embedded.bzl", "EmbeddedFilesInfo")
+
 load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")
 load("@rules_java//java/common:java_info.bzl", "JavaInfo")
+load(":embedded.bzl", "EmbeddedFilesInfo")
+load(":filter_deps.bzl", "cc_deps_filter")
 
 # Valid platforms supported by multi_* rules
 VALID_PLATFORMS = ["host", "wasm", "droid"]
@@ -31,7 +32,7 @@ _DROID_COMMON_ATTRS = dict(
     droid_manifest = attr.label(
         allow_single_file = [".xml"],
         doc = ("The name of the Android manifest file, normally " +
-                "AndroidManifest.xml. Must be defined if resource_files or assets are defined."),
+               "AndroidManifest.xml. Must be defined if resource_files or assets are defined."),
     ),
     droid_srcs = attr.label_list(
         allow_files = [".java", ".srcjar"],
@@ -40,32 +41,32 @@ _DROID_COMMON_ATTRS = dict(
     ),
     droid_custom_package = attr.string(
         doc = ("Java package for which java sources will be generated. " +
-                "By default the package is inferred from the directory where the BUILD file " +
-                "containing the rule is. You can specify a different package but this is " +
-                "highly discouraged since it can introduce classpath conflicts with other " +
-                "libraries that will only be detected at runtime."),
+               "By default the package is inferred from the directory where the BUILD file " +
+               "containing the rule is. You can specify a different package but this is " +
+               "highly discouraged since it can introduce classpath conflicts with other " +
+               "libraries that will only be detected at runtime."),
     ),
     droid_assets = attr.label_list(
         allow_files = True,
         cfg = "target",
         doc = ("The list of assets to be packaged. This is typically a glob of " +
-                "all files under the assets directory. You can also reference " +
-                "other rules (any rule that produces files) or exported files in " +
-                "the other packages, as long as all those files are under the " +
-                "assets_dir directory in the corresponding package."),
+               "all files under the assets directory. You can also reference " +
+               "other rules (any rule that produces files) or exported files in " +
+               "the other packages, as long as all those files are under the " +
+               "assets_dir directory in the corresponding package."),
     ),
     droid_assets_dir = attr.string(
         doc = ("The string giving the path to the files in assets. " +
-                "The pair assets and assets_dir describe packaged assets and either both " +
-                "attributes should be provided or none of them."),
+               "The pair assets and assets_dir describe packaged assets and either both " +
+               "attributes should be provided or none of them."),
     ),
     droid_resource_files = attr.label_list(
         allow_files = True,
         doc = ("The list of resources to be packaged. This " +
-                "is typically a glob of all files under the res directory. Generated files " +
-                "(from genrules) can be referenced by Label here as well. The only " +
-                "restriction is that the generated outputs must be under the same \"res\" " +
-                "directory as any other resource files that are included."),
+               "is typically a glob of all files under the res directory. Generated files " +
+               "(from genrules) can be referenced by Label here as well. The only " +
+               "restriction is that the generated outputs must be under the same \"res\" " +
+               "directory as any other resource files that are included."),
     ),
 )
 
@@ -136,12 +137,12 @@ def _get_cc_deps(name, all_deps):
 def _pop_droid_kwargs(kwargs):
     """Pops and returns Android-specific kwargs from the given kwargs dict."""
     return dict(
-        manifest        = kwargs.pop("droid_manifest", None),
-        srcs            = kwargs.pop("droid_srcs", []),
-        custom_package  = kwargs.pop("droid_custom_package", None),
-        assets          = kwargs.pop("droid_assets", []),
-        assets_dir      = kwargs.pop("droid_assets_dir", None),
-        resource_files  = kwargs.pop("droid_resource_files", []),
+        manifest = kwargs.pop("droid_manifest", None),
+        srcs = kwargs.pop("droid_srcs", []),
+        custom_package = kwargs.pop("droid_custom_package", None),
+        assets = kwargs.pop("droid_assets", []),
+        assets_dir = kwargs.pop("droid_assets_dir", None),
+        resource_files = kwargs.pop("droid_resource_files", []),
     )
 
 multi_common = struct(

@@ -6,20 +6,19 @@ load("@rules_android//rules:rules.bzl", "android_binary")
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_cc//cc:cc_test.bzl", "cc_test")
-load(":filter_deps.bzl", "droid_top_manifest")
-load(
-    ":multi_common.bzl",
-    "multi_common",
-    "build_platform_select_dict",
-    "validate_platforms",
-)
-load(":run_wrapper_cmd.bzl", "run_wrapper_cmd")
 load(":cc_common.bzl", "cc_common")
 load(
     ":embedded.bzl",
-    "embedded_files",
     "host_embedded_data",
 )
+load(":filter_deps.bzl", "droid_top_manifest")
+load(
+    ":multi_common.bzl",
+    "build_platform_select_dict",
+    "multi_common",
+    "validate_platforms",
+)
+load(":run_wrapper_cmd.bzl", "run_wrapper_cmd")
 
 # Android library to wrap execution of cc_library, allowing to declare simple main() function in C++ app
 _DROID_GLUE_LIB = Label("//rules/droid:droid_glue")
@@ -160,12 +159,12 @@ def _multi_app_impl(name, visibility, **kwargs):
 
         # If no custom manifest provided - use topmost manifest from dependencies:
         # So it defaults to AndroidManifest.xml from droid_glue library, but can also be overridden in another deps
-        if droid_kwargs['manifest'] == None:
+        if droid_kwargs["manifest"] == None:
             droid_top_manifest(
                 name = "{}.manifest".format(droid_name),
                 deps = droid_deps,
             )
-            droid_kwargs['manifest'] = ":{}.manifest".format(droid_name)
+            droid_kwargs["manifest"] = ":{}.manifest".format(droid_name)
 
         droid_apk_name = "{}-apk".format(droid_name)
         android_binary(

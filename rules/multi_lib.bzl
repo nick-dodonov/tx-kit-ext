@@ -11,18 +11,18 @@ load("@rules_android//rules:rules.bzl", "android_library")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")
 load("@rules_java//java/common:java_info.bzl", "JavaInfo")
-load(":filter_deps.bzl", "droid_top_manifest")
-load(
-    ":multi_common.bzl",
-    "multi_common",
-    "build_platform_select_dict",
-    "validate_platforms",
-)
-load(":cc_common.bzl", "cc_common")
 load(
     "@tx-kit-ext//rules:embedded.bzl",
     "droid_embedded_assets",
     "wasm_embedded_linkopts_params",
+)
+load(":cc_common.bzl", "cc_common")
+load(":filter_deps.bzl", "droid_top_manifest")
+load(
+    ":multi_common.bzl",
+    "build_platform_select_dict",
+    "multi_common",
+    "validate_platforms",
 )
 
 def _multi_lib_impl(name, visibility, **kwargs):
@@ -117,20 +117,20 @@ def _multi_lib_impl(name, visibility, **kwargs):
 
             droid_deps = [":{}.lib".format(droid_name)] + all_deps
 
-            if droid_kwargs['manifest'] == None:
+            if droid_kwargs["manifest"] == None:
                 droid_top_manifest(
                     name = "{}.manifest".format(droid_name),
                     deps = droid_deps,
                 )
-                droid_kwargs['manifest'] = ":{}.manifest".format(droid_name)
+                droid_kwargs["manifest"] = ":{}.manifest".format(droid_name)
 
             #TODO: add assets_dir to droid_embedded_assets rule allowing to setup it
-            droid_kwargs['assets_dir'] = "assets"
+            droid_kwargs["assets_dir"] = "assets"
             droid_embedded_assets(
                 name = "{}.assets".format(droid_name),
                 embedded_data = embedded_data,
             )
-            droid_kwargs['assets'] = [":{}.assets".format(droid_name)] + (droid_kwargs.get('assets') or [])
+            droid_kwargs["assets"] = [":{}.assets".format(droid_name)] + (droid_kwargs.get("assets") or [])
 
             android_library(
                 name = droid_name,
