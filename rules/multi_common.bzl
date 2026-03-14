@@ -133,7 +133,19 @@ def _get_cc_deps(name, all_deps):
         return [":{}".format(cc_deps_filter_name)]
     return []
 
+def _pop_droid_kwargs(kwargs):
+    """Pops and returns Android-specific kwargs from the given kwargs dict."""
+    return dict(
+        manifest        = kwargs.pop("droid_manifest", None),
+        srcs            = kwargs.pop("droid_srcs", []),
+        custom_package  = kwargs.pop("droid_custom_package", None),
+        assets          = kwargs.pop("droid_assets", []),
+        assets_dir      = kwargs.pop("droid_assets_dir", None),
+        resource_files  = kwargs.pop("droid_resource_files", []),
+    )
+
 multi_common = struct(
     get_common_attrs = _get_common_attrs,
     get_cc_deps = _get_cc_deps,
+    pop_droid_kwargs = _pop_droid_kwargs,
 )

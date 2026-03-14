@@ -35,13 +35,8 @@ def _multi_lib_impl(name, visibility, **kwargs):
 
     # Extract Android-specific attributes
     droid_library = kwargs.pop("droid_library", False)
-    droid_manifest = kwargs.pop("droid_manifest", None)
-    droid_srcs = kwargs.pop("droid_srcs")
     droid_exports = kwargs.pop("droid_exports")
-    droid_custom_package = kwargs.pop("droid_custom_package", None)
-    droid_assets = kwargs.pop("droid_assets", [])
-    droid_assets_dir = kwargs.pop("droid_assets_dir", None)
-    droid_resource_files = kwargs.pop("droid_resource_files", [])
+    droid_kwargs = multi_common.pop_droid_kwargs(kwargs)
 
     tags = kwargs.pop("tags", [])
     if tags == None:
@@ -109,53 +104,48 @@ def _multi_lib_impl(name, visibility, **kwargs):
     # Droid (Android NDK)
     if "droid" in enabled_platforms:
         droid_name = "{}-droid".format(name)
+        droid_tags = tags + ["droid"]
 
         # Create android_library wrapper when explicitly requested via droid_library
         if droid_library:
             droid_cc_name = "{}.lib".format(droid_name)
             cc_library(
                 name = droid_cc_name,
-                visibility = visibility,
                 target_compatible_with = ["@platforms//os:android"],
                 **kwargs
             )
 
             droid_deps = [":{}.lib".format(droid_name)] + all_deps
 
-            if droid_manifest == None:
+            if droid_kwargs['manifest'] == None:
                 droid_top_manifest(
                     name = "{}.manifest".format(droid_name),
                     deps = droid_deps,
                 )
-                droid_manifest = ":{}.manifest".format(droid_name)
+                droid_kwargs['manifest'] = ":{}.manifest".format(droid_name)
 
             #TODO: add assets_dir to droid_embedded_assets rule allowing to setup it
-            droid_assets_dir = "assets"
+            droid_kwargs['assets_dir'] = "assets"
             droid_embedded_assets(
                 name = "{}.assets".format(droid_name),
                 embedded_data = embedded_data,
             )
-            droid_assets = droid_assets + [":{}.assets".format(droid_name)]
+            droid_kwargs['assets'] = [":{}.assets".format(droid_name)] + (droid_kwargs.get('assets') or [])
 
             android_library(
                 name = droid_name,
-                tags = tags + ["droid"],
-                srcs = droid_srcs,
-                manifest = droid_manifest,
-                custom_package = droid_custom_package,
-                assets = droid_assets,
-                assets_dir = droid_assets_dir,
-                resource_files = droid_resource_files,
-                deps = droid_deps,
-                exports = droid_exports,
+                tags = droid_tags,
                 visibility = visibility,
                 target_compatible_with = ["@platforms//os:android"],
+                deps = droid_deps,
+                exports = droid_exports,
+                **droid_kwargs
             )
         else:
             # No Java sources: create cc_library with main name (backward compatible)
             cc_library(
                 name = droid_name,
-                tags = tags + ["droid"],
+                tags = droid_tags,
                 visibility = visibility,
                 target_compatible_with = ["@platforms//os:android"],
                 **kwargs

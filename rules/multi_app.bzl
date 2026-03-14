@@ -67,13 +67,9 @@ def _multi_app_impl(name, visibility, **kwargs):
     enabled_platforms = kwargs.pop("platforms", ["host", "wasm", "droid"])
     embedded_data = kwargs.pop("embedded_data", None)
 
-    droid_manifest = kwargs.pop("droid_manifest", None)
-    droid_srcs = kwargs.pop("droid_srcs", [])
+    # Extract Android-specific attributes
+    droid_kwargs = multi_common.pop_droid_kwargs(kwargs)
     droid_deps = kwargs.pop("droid_deps")
-    droid_custom_package = kwargs.pop("droid_custom_package", None)
-    droid_assets = kwargs.pop("droid_assets", [])
-    droid_assets_dir = kwargs.pop("droid_assets_dir", None)
-    droid_resource_files = kwargs.pop("droid_resource_files", [])
 
     tags = kwargs.pop("tags", [])
     if tags == None:
@@ -164,35 +160,30 @@ def _multi_app_impl(name, visibility, **kwargs):
 
         # If no custom manifest provided - use topmost manifest from dependencies:
         # So it defaults to AndroidManifest.xml from droid_glue library, but can also be overridden in another deps
-        if droid_manifest == None:
+        if droid_kwargs['manifest'] == None:
             droid_top_manifest(
                 name = "{}.manifest".format(droid_name),
                 deps = droid_deps,
             )
-            droid_manifest = ":{}.manifest".format(droid_name)
+            droid_kwargs['manifest'] = ":{}.manifest".format(droid_name)
 
         droid_apk_name = "{}-apk".format(droid_name)
         android_binary(
             name = droid_apk_name,
-            srcs = droid_srcs,
-            custom_package = droid_custom_package,
-            assets = droid_assets,
-            assets_dir = droid_assets_dir,
-            resource_files = droid_resource_files,
+            visibility = visibility,
             deps = droid_deps,
-            manifest = droid_manifest,
             manifest_values = {
                 "native_lib_name": droid_apk_name,  # android_binary rule makes lib{droid_apk_name}.so from cc_library deps
             },
-            visibility = visibility,
+            **droid_kwargs
         )
 
         run_wrapper_cmd(
             name = droid_name,
-            bin_target = ":{}".format(droid_apk_name),
             tags = tags + ["droid", "exclusive"],  # exclusive: prevent parallel execution with other tests (emulator conflict)
-            is_test = is_test,
             visibility = visibility,
+            bin_target = ":{}".format(droid_apk_name),
+            is_test = is_test,
         )
         test_targets.append(":{}".format(droid_name))
 
@@ -202,9 +193,9 @@ def _multi_app_impl(name, visibility, **kwargs):
         # Build test list dynamically based on enabled platforms
         native.test_suite(
             name = name,
-            tests = test_targets,
-            visibility = visibility,
             tags = tags,
+            visibility = visibility,
+            tests = test_targets,
         )
     else:
         # Alias to simplify build/run for current target platform
