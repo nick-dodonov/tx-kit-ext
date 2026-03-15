@@ -5,8 +5,6 @@ load("@bazel_skylib//rules:native_binary.bzl", "native_test")
 load("@platforms//host:constraints.bzl", "HOST_CONSTRAINTS")
 
 _runner_target = Label("//runner:runner")
-_sh_wrapper_cmd = Label("//runner:sh_wrapper.cmd")
-_sh_wrapper_sh = Label("//runner:sh_wrapper.sh")
 
 
 def _run_wrapper_args(name, bin_target, testonly=False):
@@ -92,10 +90,7 @@ def run_wrapper_cmd(name, bin_target, is_test=False, via_skylib=_NATIVE_RULE_MOD
         native_rule(
             name = name,
             out = cmd_name,
-            src = select({
-                "@platforms//os:windows": _sh_wrapper_cmd,
-                "//conditions:default": _sh_wrapper_sh,
-            }),
+            src = Label("//runner:sh_wrapper"),
             data = [
                 runner_args_name,
                 _runner_target,
@@ -108,10 +103,7 @@ def run_wrapper_cmd(name, bin_target, is_test=False, via_skylib=_NATIVE_RULE_MOD
         sh_rule = sh_binary if not is_test else sh_test
         sh_rule(
             name = cmd_name,
-            srcs = select({
-                "@platforms//os:windows": [_sh_wrapper_cmd],
-                "//conditions:default": [_sh_wrapper_sh],
-            }),
+            srcs = Label("//runner:sh_wrapper"),
             data = [
                 runner_args_name,
                 _runner_target,
