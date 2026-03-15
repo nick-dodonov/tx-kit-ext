@@ -1,4 +1,13 @@
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("@rules_python//python:pip.bzl", "compile_pip_requirements")
+
+# This flag allows to build platform-specific targets of multi-build rules without changing the target platform. 
+# That is useful for testing all platforms in once without --platforms=... switches.
+bool_flag(
+    name = "multi_flag",
+    build_setting_default = False,
+    visibility = ["//visibility:public"],
+)
 
 # `bazel run //:requirements.update` to update requirements_lock.txt based on pyproject.toml
 # `bazel test //:requirements.test` to test

@@ -7,6 +7,7 @@ the current --platforms configuration.
 For Android platform with Java sources, creates android_library wrapping the cc_library.
 """
 
+load("@platforms//host:constraints.bzl", "HOST_CONSTRAINTS")
 load("@rules_android//rules:rules.bzl", "android_library")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")
@@ -59,17 +60,12 @@ def _multi_lib_impl(name, visibility, **kwargs):
     # Host: exclude wasm and android
     if "host" in enabled_platforms:
         host_kwargs = {k: v for k, v in kwargs.items()}
-        host_data = host_kwargs.pop("data") or []  # Include embedded files in runfiles for host
-        host_data = host_data + embedded_data
+        host_data = host_kwargs.pop("data") or [] + embedded_data  # Include embedded files in runfiles for host
 
         cc_library(
             name = "{}-host".format(name),
             tags = tags + ["host"],
-            target_compatible_with = select({
-                "@platforms//cpu:wasm32": ["@platforms//:incompatible"],
-                "@platforms//os:android": ["@platforms//:incompatible"],
-                "//conditions:default": [],
-            }),
+            target_compatible_with = HOST_CONSTRAINTS,
             visibility = visibility,
             data = host_data,
             **host_kwargs
@@ -80,12 +76,15 @@ def _multi_lib_impl(name, visibility, **kwargs):
     if "wasm" in enabled_platforms:
         wasm_embedded_linkopts_params(
             name = "{}-wasm.params".format(name),
+            target_compatible_with = ["@platforms//cpu:wasm32"],
+            visibility = ["//visibility:private"],
             embedded_data = embedded_data,
         )
 
         wasm_kwargs = cc_common.get_wasm_cc_kwargs(kwargs)
-        additional_linker_inputs = wasm_kwargs.pop("additional_linker_inputs") or []
-        additional_linker_inputs = additional_linker_inputs + [":{}-wasm.params".format(name)]
+
+        wasm_additional_linker_inputs = wasm_kwargs.pop("additional_linker_inputs") or []
+        wasm_additional_linker_inputs = wasm_additional_linker_inputs + [":{}-wasm.params".format(name)]
 
         wasm_linkopts = wasm_kwargs.pop("linkopts") or []
         wasm_linkopts = wasm_linkopts + ["@$(execpaths :{}-wasm.params)".format(name)]
@@ -93,9 +92,9 @@ def _multi_lib_impl(name, visibility, **kwargs):
         cc_library(
             name = "{}-wasm".format(name),
             tags = tags + ["wasm"],
-            visibility = visibility,
             target_compatible_with = ["@platforms//cpu:wasm32"],
-            additional_linker_inputs = additional_linker_inputs,
+            visibility = visibility,
+            additional_linker_inputs = wasm_additional_linker_inputs,
             linkopts = wasm_linkopts,
             **wasm_kwargs
         )
@@ -112,6 +111,7 @@ def _multi_lib_impl(name, visibility, **kwargs):
             cc_library(
                 name = droid_cc_name,
                 target_compatible_with = ["@platforms//os:android"],
+                visibility = ["//visibility:private"],
                 **kwargs
             )
 
@@ -120,6 +120,8 @@ def _multi_lib_impl(name, visibility, **kwargs):
             if droid_kwargs["manifest"] == None:
                 droid_top_manifest(
                     name = "{}.manifest".format(droid_name),
+                    target_compatible_with = ["@platforms//os:android"],
+                    visibility = ["//visibility:private"],
                     deps = droid_deps,
                 )
                 droid_kwargs["manifest"] = ":{}.manifest".format(droid_name)
@@ -128,6 +130,8 @@ def _multi_lib_impl(name, visibility, **kwargs):
             droid_kwargs["assets_dir"] = "assets"
             droid_embedded_assets(
                 name = "{}.assets".format(droid_name),
+                target_compatible_with = ["@platforms//os:android"],
+                visibility = ["//visibility:private"],
                 embedded_data = embedded_data,
             )
             droid_kwargs["assets"] = [":{}.assets".format(droid_name)] + (droid_kwargs.get("assets") or [])
@@ -135,8 +139,8 @@ def _multi_lib_impl(name, visibility, **kwargs):
             android_library(
                 name = droid_name,
                 tags = droid_tags,
-                visibility = visibility,
                 target_compatible_with = ["@platforms//os:android"],
+                visibility = visibility,
                 deps = droid_deps,
                 exports = droid_exports,
                 **droid_kwargs
@@ -146,8 +150,8 @@ def _multi_lib_impl(name, visibility, **kwargs):
             cc_library(
                 name = droid_name,
                 tags = droid_tags,
-                visibility = visibility,
                 target_compatible_with = ["@platforms//os:android"],
+                visibility = visibility,
                 **kwargs
             )
 

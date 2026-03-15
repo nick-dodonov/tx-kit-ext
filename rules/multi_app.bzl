@@ -96,6 +96,8 @@ def _multi_app_impl(name, visibility, **kwargs):
     if "host" in enabled_platforms:
         host_embedded_data(
             name = "{}-host.data".format(name),
+            target_compatible_with = HOST_CONSTRAINTS,
+            visibility = ["//visibility:private"],
             embedded_data = embedded_data,
             deps = all_deps,  # pass deps to be able to collect transitive embedded files
         )
@@ -123,21 +125,30 @@ def _multi_app_impl(name, visibility, **kwargs):
         cc_binary(
             name = "{}-wasm.tar".format(name),
             target_compatible_with = ["@platforms//cpu:wasm32"],
+            visibility = ["//visibility:private"],
             **cc_common.get_wasm_cc_kwargs(wasm_kwargs)
         )
 
+        wasm_target_compatible_with = select({
+            Label("//rules:multi_host_setting"): [],
+            "//conditions:default": ["@platforms//cpu:wasm32"],
+        })
+
         wasm_cc_binary(
             name = "{}-wasm.dir".format(name),
-            cc_target = ":{}-wasm.tar".format(name),
+            tags = tags + ["wasm"],
+            target_compatible_with = wasm_target_compatible_with,
             visibility = visibility,
+            cc_target = ":{}-wasm.tar".format(name),
         )
 
         run_wrapper_cmd(
             name = "{}-wasm".format(name),
-            bin_target = ":{}-wasm.dir".format(name),
             tags = tags + ["wasm"],
-            is_test = is_test,
+            target_compatible_with = wasm_target_compatible_with,
             visibility = visibility,
+            bin_target = ":{}-wasm.dir".format(name),
+            is_test = is_test,
         )
         test_targets.append(":{}-wasm".format(name))
 
@@ -151,6 +162,7 @@ def _multi_app_impl(name, visibility, **kwargs):
         cc_library(
             name = "{}.lib".format(droid_name),
             target_compatible_with = ["@platforms//os:android"],
+            visibility = ["//visibility:private"],
             alwayslink = is_test,  # Prevent linker from stripping test registration code
             **droid_lib_kwargs
         )
@@ -162,13 +174,21 @@ def _multi_app_impl(name, visibility, **kwargs):
         if droid_kwargs["manifest"] == None:
             droid_top_manifest(
                 name = "{}.manifest".format(droid_name),
+                target_compatible_with = ["@platforms//os:android"],
+                visibility = ["//visibility:private"],
                 deps = droid_deps,
             )
             droid_kwargs["manifest"] = ":{}.manifest".format(droid_name)
 
+        droid_target_compatible_with = select({
+            Label("//rules:multi_host_setting"): [],
+            "//conditions:default": ["@platforms//os:android"],
+        })
+
         droid_apk_name = "{}-apk".format(droid_name)
         android_binary(
             name = droid_apk_name,
+            target_compatible_with = droid_target_compatible_with,
             visibility = visibility,
             deps = droid_deps,
             manifest_values = {
@@ -180,6 +200,7 @@ def _multi_app_impl(name, visibility, **kwargs):
         run_wrapper_cmd(
             name = droid_name,
             tags = tags + ["droid", "exclusive"],  # exclusive: prevent parallel execution with other tests (emulator conflict)
+            target_compatible_with = droid_target_compatible_with,
             visibility = visibility,
             bin_target = ":{}".format(droid_apk_name),
             is_test = is_test,
