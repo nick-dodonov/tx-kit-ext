@@ -1,4 +1,4 @@
-load("@rules_cc//cc:defs.bzl", "cc_library", "cc_binary")
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 
 cc_library(
     name = "lib",
@@ -12,8 +12,8 @@ cc_library(
 cc_binary(
     name = "bin",
     srcs = ["bin.cc"],
-    deps = [":lib"],
     visibility = [
         "//visibility:public",
     ],
+    deps = [":lib"],
 )

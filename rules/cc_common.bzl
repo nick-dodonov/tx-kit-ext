@@ -56,7 +56,7 @@ def _get_default_linkopts():
     return select({
         "@platforms//cpu:wasm32": [
             "--oformat=html",
-            "--emrun",  # Поддержка emrun для headless запуска
+            "--emrun",  # Support for emrun for headless execution
             # Need for exit(status)
             # - https://emscripten.org/docs/api_reference/emscripten.h.html#c.emscripten_force_exit
             # - https://emscripten.org/docs/getting_started/FAQ.html#what-does-exiting-the-runtime-mean-why-don-t-atexit-s-run

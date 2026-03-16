@@ -1,4 +1,4 @@
-load("@rules_android//rules:rules.bzl", "android_binary", "android_library")
+load("@rules_android//rules:rules.bzl", "android_binary")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 
 package(
@@ -17,13 +17,12 @@ cc_library(
     name = "jni_dep",
     srcs = ["main/cpp/jni_dep.cc"],
     hdrs = ["main/cpp/jni_dep.h"],
-
-    deps = [
-        "@androidndk//:native_app_glue",
-    ],
     linkopts = [
         "-llog",
         "-landroid",
         "-Wl,--undefined=ANativeActivity_onCreate",
+    ],
+    deps = [
+        "@androidndk//:native_app_glue",
     ],
 )

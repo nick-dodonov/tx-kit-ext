@@ -12,7 +12,7 @@ android_library(
 droid_top_manifest(
     name = "top_manifest",
     deps = [
-        "//rules/droid:droid_native",  # dependency without manifests
         ":derived",  # dependency with 2 manifests
+        "//rules/droid:droid_native",  # dependency without manifests
     ],
 )

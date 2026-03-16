@@ -2,6 +2,6 @@ load("@platforms//host:constraints.bzl", "HOST_CONSTRAINTS")
 
 config_setting(
     name = "multi_host_setting",
-    flag_values = {"//:multi_flag": "True"},
     constraint_values = HOST_CONSTRAINTS,
+    flag_values = {"//:multi_flag": "True"},
 )

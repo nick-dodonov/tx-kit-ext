@@ -15,14 +15,14 @@ android_binary(
 
 android_library(
     name = "applib",
-    manifest = "main/AndroidManifest.xml",
     srcs = glob([
-        "main/java/com/app/*.java"
-    ]),
-    resource_files = glob([
-        "main/res/**"
+        "main/java/com/app/*.java",
     ]),
     custom_package = "",
+    manifest = "main/AndroidManifest.xml",
+    resource_files = glob([
+        "main/res/**",
+    ]),
     deps = [
         ":jni",
     ],
@@ -39,6 +39,6 @@ cc_library(
     srcs = ["main/cpp/jni_dep.cc"],
     hdrs = ["main/cpp/jni_dep.h"],
     linkopts = [
-        "-llog"
+        "-llog",
     ],
 )

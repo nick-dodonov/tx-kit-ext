@@ -4,7 +4,10 @@ load("@tx-kit-ext//rules:multi_app.bzl", "multi_app")
 multi_app(
     name = "test-host-wasm",
     srcs = ["main.cpp"],
-    platforms = ["host", "wasm"],
+    platforms = [
+        "host",
+        "wasm",
+    ],
 )
 
 # Test 2: Single platform (host only)
