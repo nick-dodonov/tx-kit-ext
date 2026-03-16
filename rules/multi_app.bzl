@@ -9,7 +9,9 @@ load("@rules_cc//cc:cc_test.bzl", "cc_test")
 load(":cc_common.bzl", "cc_common")
 load(
     ":embedded.bzl",
+    "droid_embedded_assets",
     "host_embedded_data",
+    "wasm_embedded_linkopts_params",
 )
 load(":filter_deps.bzl", "droid_top_manifest")
 load(
@@ -121,12 +123,29 @@ def _multi_app_impl(name, visibility, **kwargs):
     ################################################################
     # WASM specific targets with runner wrapper
     if "wasm" in enabled_platforms:
+        wasm_embedded_linkopts_params(
+            name = "{}-wasm.params".format(name),
+            target_compatible_with = ["@platforms//cpu:wasm32"],
+            visibility = ["//visibility:private"],
+            embedded_data = embedded_data,
+        )
+
         wasm_kwargs = {k: v for k, v in kwargs.items() if k not in (_CC_TEST_ONLY_ATTRS if is_test else [])}
+        wasm_kwargs = cc_common.get_wasm_cc_kwargs(wasm_kwargs)
+
+        wasm_additional_linker_inputs = wasm_kwargs.pop("additional_linker_inputs") or []
+        wasm_additional_linker_inputs = wasm_additional_linker_inputs + [":{}-wasm.params".format(name)]
+
+        wasm_linkopts = wasm_kwargs.pop("linkopts") or []
+        wasm_linkopts = wasm_linkopts + ["@$(execpaths :{}-wasm.params)".format(name)]
+
         cc_binary(
             name = "{}-wasm.tar".format(name),
             target_compatible_with = ["@platforms//cpu:wasm32"],
             visibility = ["//visibility:private"],
-            **cc_common.get_wasm_cc_kwargs(wasm_kwargs)
+            additional_linker_inputs = wasm_additional_linker_inputs,
+            linkopts = wasm_linkopts,
+            **wasm_kwargs
         )
 
         wasm_target_compatible_with = select({
@@ -179,6 +198,16 @@ def _multi_app_impl(name, visibility, **kwargs):
                 deps = droid_deps,
             )
             droid_kwargs["manifest"] = ":{}.manifest".format(droid_name)
+
+        # Add embedded data as assets
+        droid_kwargs["assets_dir"] = "assets"
+        droid_embedded_assets(
+            name = "{}.assets".format(droid_name),
+            target_compatible_with = ["@platforms//os:android"],
+            visibility = ["//visibility:private"],
+            embedded_data = embedded_data,
+        )
+        droid_kwargs["assets"] = [":{}.assets".format(droid_name)] + (droid_kwargs.get("assets") or [])
 
         droid_target_compatible_with = select({
             Label("//rules:multi_host_setting"): [],
