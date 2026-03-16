@@ -2,6 +2,7 @@
 
 #include <android/native_activity.h>
 
+#include "droid_activity.h"
 #include "droid_argv.h"
 #include "droid_log.h"
 #include "redirect_stdout.h"
@@ -14,6 +15,9 @@
 __attribute__((weak))
 #endif
 int main(int argc, char* argv[]);
+
+// Global ANativeActivity pointer for access from application code
+ANativeActivity* g_NativeActivity = nullptr;
 
 namespace 
 {
@@ -72,6 +76,8 @@ static void onStop(ANativeActivity* activity)
 JNIEXPORT void ANativeActivity_onCreate(ANativeActivity* activity, void* savedState, size_t savedStateSize)
 {
     LOGD("onCreate: %p savedState=%p savedStateSize=%zu", activity, savedState, savedStateSize);
+
+    g_NativeActivity = activity;  // Store globally for application access
 
     if (activity->vm->AttachCurrentThread(&_env, nullptr) != JNI_OK) {
         LOGE("AttachCurrentThread failed");
