@@ -25,7 +25,6 @@ multi_app(
 # multi_app(
 #     name = "test-none-platforms",
 #     srcs = ["main.cpp"],
-#     deps = ["@tx-pkg-aux//src/pkg-boot"],
 #     platforms = [],  # Should fail
 # )
 
@@ -33,6 +32,5 @@ multi_app(
 # multi_app(
 #     name = "test-none-platforms",
 #     srcs = ["main.cpp"],
-#     deps = ["@tx-pkg-aux//src/pkg-boot"],
 #     platforms = ["host", "invalid"],  # Should fail
 # )
