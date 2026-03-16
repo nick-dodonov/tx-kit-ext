@@ -263,21 +263,32 @@ class WasmRunner:
 
         raise FileNotFoundError(f"HTML file not found in TAR: {file_path}")
 
-    def _make_cmd_with_node(self, html_file: Path, args: list[str]) -> list[str]:
+    def _find_js_file(self, file_path: str) -> Path:
+        """Find the JS file for Node.js execution."""
+        
+        # Expect path as tar archive
+        current_tar_base = Path(file_path)
+        extracted = self._extract_from_tar_if_needed(current_tar_base)
+        if extracted:
+            # Convert HTML path to JS path
+            js_file = extracted.with_suffix('.js')
+            if not js_file.exists():
+                raise FileNotFoundError(f"JavaScript file not found: {js_file}")
+            return js_file
+
+        raise FileNotFoundError(f"JS file not found in TAR: {file_path}")
+
+    def _make_cmd_with_node(self, js_file: Path, args: list[str]) -> list[str]:
         """Run WASM using Node.js (console mode)."""
         log.debug(f"WASM Node.js mode (via node)")
-        log.debug(f"cwd: {os.getcwd()}")
-        log.debug(f"html: {html_file}")
+        log.debug(f"cwd: {js_file.parent}")
+        log.debug(f"js: {js_file.name}")
 
-        js_file = html_file.with_suffix('.js')
-        if not js_file.exists():
-            raise FileNotFoundError(f"JavaScript file not found: {js_file}")
-
-        log.debug(f"js: {js_file}")
         if args:
             log.debug(f"args: {' '.join(args)}")
 
-        return ['node', str(js_file)] + args
+        # Use just the filename since cwd will be set to the directory
+        return ['node', js_file.name] + args
 
     def _make_cmd_with_emrun(self, html_file: Path, args: list[str], emrun: EmrunOptions) -> list[str]:
         """Run WASM using emrun (browser mode)."""
@@ -327,14 +338,21 @@ class WasmRunner:
 
     def make_command(self) -> runner.cmd.Command:
         options = self.options
-        html_file = self._find_html_file(options.file)
 
         if options.emrun:
+            html_file = self._find_html_file(options.file)
             cmd = self._make_cmd_with_emrun(html_file, options.args, options.emrun)
+            file_name = html_file.name
+            cwd = None
         else:
-            cmd = self._make_cmd_with_node(html_file, options.args)
+            js_file = self._find_js_file(options.file)
+            cmd = self._make_cmd_with_node(js_file, options.args)
+            file_name = js_file.name
+            # Set cwd to JS file directory so Node.js can find .data and .wasm files
+            cwd = str(js_file.parent)
 
         return runner.cmd.RunCommand(
-            scope_prefix=f"[WASM: {cmd[0]}: {html_file.name}]",
+            scope_prefix=f"[WASM: {cmd[0]}: {file_name}]",
             cmd=cmd,
+            cwd=cwd,
         )
