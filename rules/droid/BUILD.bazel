@@ -1,5 +1,6 @@
 load("@rules_android//rules:rules.bzl", "android_library")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("//rules:droid_deps.bzl", "droid_default_app_manifest")
 
 exports_files([
     "template.AndroidManifest.xml",
@@ -23,10 +24,15 @@ cc_library(
     ],
 )
 
+droid_default_app_manifest(
+    name = "droid_default_app_manifest",
+    default_app_manifest = ":template.AndroidManifest.xml",
+)
+
 android_library(
     name = "droid_glue",
     srcs = ["src/java/tx/DroidActivity.java"],
-    manifest = "template.AndroidManifest.xml",
+    data = [":droid_default_app_manifest"],
     visibility = ["//visibility:public"],
     deps = [":droid_native"],
 )

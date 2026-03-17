@@ -18,7 +18,6 @@ load(
     "wasm_embedded_linkopts_params",
 )
 load(":cc_common.bzl", "cc_common")
-load(":filter_deps.bzl", "droid_top_manifest")
 load(
     ":multi_common.bzl",
     "build_platform_select_dict",
@@ -106,7 +105,7 @@ def _multi_lib_impl(name, visibility, **kwargs):
         droid_tags = tags + ["droid"]
 
         # Create android_library wrapper when explicitly requested via droid_library
-        if droid_library:
+        if True: # or droid_library:
             droid_cc_name = "{}.lib".format(droid_name)
             cc_library(
                 name = droid_cc_name,
@@ -115,16 +114,19 @@ def _multi_lib_impl(name, visibility, **kwargs):
                 **kwargs
             )
 
-            droid_deps = [":{}.lib".format(droid_name)] + all_deps
+            # if droid_kwargs["manifest"]:
+            #     droid_kwargs["exports_manifest"] = 1
+            # else:
+            #     droid_top_manifest(
+            #         name = "{}.manifest".format(droid_name),
+            #         target_compatible_with = ["@platforms//os:android"],
+            #         visibility = ["//visibility:private"],
+            #         deps = all_deps,
+            #         allow_empty = True,
+            #     )
+            #     droid_kwargs["manifest"] = ":{}.manifest".format(droid_name)
 
-            if droid_kwargs["manifest"] == None:
-                droid_top_manifest(
-                    name = "{}.manifest".format(droid_name),
-                    target_compatible_with = ["@platforms//os:android"],
-                    visibility = ["//visibility:private"],
-                    deps = droid_deps,
-                )
-                droid_kwargs["manifest"] = ":{}.manifest".format(droid_name)
+            droid_deps = [":{}.lib".format(droid_name)] + all_deps
 
             #TODO: add assets_dir to droid_embedded_assets rule allowing to setup it
             droid_kwargs["assets_dir"] = "assets"

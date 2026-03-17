@@ -6,7 +6,7 @@ import android.os.Bundle;
 import android.util.Log;
 
 public class DroidActivity extends NativeActivity {
-    final String TAG = "droid.A";
+    final String TAG = "glue.A";
 
     private int exitCode = 128; // default to signal 128 for unknown exit code
 

@@ -13,7 +13,7 @@ load(
     "host_embedded_data",
     "wasm_embedded_linkopts_params",
 )
-load(":filter_deps.bzl", "droid_top_manifest")
+load(":droid_deps.bzl", "droid_select_default_app_manifest")
 load(
     ":multi_common.bzl",
     "build_platform_select_dict",
@@ -191,11 +191,11 @@ def _multi_app_impl(name, visibility, **kwargs):
         # If no custom manifest provided - use topmost manifest from dependencies:
         # So it defaults to AndroidManifest.xml from droid_glue library, but can also be overridden in another deps
         if droid_kwargs["manifest"] == None:
-            droid_top_manifest(
+            droid_select_default_app_manifest(
                 name = "{}.manifest".format(droid_name),
                 target_compatible_with = ["@platforms//os:android"],
                 visibility = ["//visibility:private"],
-                deps = droid_deps,
+                search_deps = droid_deps,
             )
             droid_kwargs["manifest"] = ":{}.manifest".format(droid_name)
 
