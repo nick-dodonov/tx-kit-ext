@@ -1,10 +1,12 @@
-load("@rules_java//java/common:java_info.bzl", "JavaInfo")
-load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")
 load(
     "@rules_android//rules:android_split_transition.bzl",
     "android_split_transition",
 )
+load("//rules:log.bzl", "log")
 
+_log = log.info(0)
+
+##########################################
 DroidDefaultAppManifestInfo = provider(
     "Provides the default Android manifest file from dependencies for multi_app.",
     fields = {
@@ -13,7 +15,7 @@ DroidDefaultAppManifestInfo = provider(
 )
 
 def _droid_default_app_manifest_impl(ctx):
-    print("=== droid_default_app_manifest {}".format(ctx.label))
+    _log("=== droid_default_app_manifest {}".format(ctx.label))
     return [
         DroidDefaultAppManifestInfo(
             default_app_manifest=ctx.file.default_app_manifest,
@@ -32,7 +34,7 @@ droid_default_app_manifest = rule(
 
 ##########################################
 def _droid_default_app_manifest_aspect_impl(target, ctx):
-    print("=== droid_default_app_manifest_aspect {}".format(target))
+    _log("=== droid_default_app_manifest_aspect {}".format(target))
 
     found_default_app_manifest = None
 
@@ -42,7 +44,7 @@ def _droid_default_app_manifest_aspect_impl(target, ctx):
         for d in target_data:
             if DroidDefaultAppManifestInfo in d:
                 found_default_app_manifest = d[DroidDefaultAppManifestInfo]
-                print("FOUND (from data)", found_default_app_manifest)
+                _log("  FOUND (in data)", found_default_app_manifest)
                 break
     
     # Second pass: if not found in data, check transitive deps (lower priority)
@@ -50,7 +52,7 @@ def _droid_default_app_manifest_aspect_impl(target, ctx):
         for dep in ctx.rule.attr.deps:
             if DroidDefaultAppManifestInfo in dep:
                 found_default_app_manifest = dep[DroidDefaultAppManifestInfo]
-                print("FOUND (from deps)", found_default_app_manifest)
+                _log("  FOUND (in deps)", found_default_app_manifest)
                 break
 
     if found_default_app_manifest:
@@ -66,15 +68,15 @@ _droid_default_app_manifest_aspect = aspect(
 
 ##########################################
 def _droid_select_default_app_manifest_impl(ctx):
-    print("=== droid_select_default_app_manifest  {}".format(ctx.label))
-
     """Take the top default app manifest from deps -> data."""
+    _log("=== droid_select_default_app_manifest  {}".format(ctx.label))
+
     found_default_app_manifest = None
     for dep in ctx.attr.search_deps:
-        print("LOOK IN", dep)
+        _log("  look in", dep)
         if DroidDefaultAppManifestInfo in dep:
             found_default_app_manifest = dep[DroidDefaultAppManifestInfo].default_app_manifest
-            print("FOUND2", found_default_app_manifest)
+            _log("    FOUND RESULT:", found_default_app_manifest)
             break
 
     if not found_default_app_manifest:
