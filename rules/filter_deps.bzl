@@ -6,6 +6,7 @@ load(
 )
 load("@rules_cc//cc/common:cc_common.bzl", "cc_common")
 load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")
+load("@rules_java//java/common:java_info.bzl", "JavaInfo")
 
 ##########################################
 def _cc_deps_filter_impl(ctx):
@@ -54,4 +55,20 @@ cc_deps_filter = rule(
     },
     provides = [CcInfo],
     doc = "Filters dependencies to return only those providing CcInfo, merging them into a single CcInfo provider.",
+)
+
+
+##########################################
+def _droid_deps_filter_impl(ctx):
+    return []
+
+
+droid_deps_filter = rule(
+    implementation = _droid_deps_filter_impl,
+    attrs = {
+        "deps": attr.label_list(
+            mandatory = True,
+        ),
+    },
+    provides = [JavaInfo],
 )

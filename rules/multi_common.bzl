@@ -30,6 +30,7 @@ _COMMON_ATTRS = dict(
 
 _DROID_COMMON_ATTRS = dict(
     droid_manifest = attr.label(
+        default = None,
         allow_single_file = [".xml"],
         doc = ("The name of the Android manifest file, normally " +
                "AndroidManifest.xml. Must be defined if resource_files or assets are defined."),
@@ -40,6 +41,7 @@ _DROID_COMMON_ATTRS = dict(
         doc = "Java/Kotlin source files for Android platform. Automatically creates android_library wrapping cc_library.",
     ),
     droid_custom_package = attr.string(
+        configurable = False,
         doc = ("Java package for which java sources will be generated. " +
                "By default the package is inferred from the directory where the BUILD file " +
                "containing the rule is. You can specify a different package but this is " +

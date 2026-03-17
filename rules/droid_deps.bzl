@@ -7,6 +7,31 @@ load("//rules:log.bzl", "log")
 _log = log.info(0)
 
 ##########################################
+DroidAllDepsInfo = provider(
+    "Provides all deps information of multi_lib target. Required to be able to propogate android_library deps through cc_library.",
+    fields = {
+        "all_deps": "All dependencies information of multi_lib target.",
+    }
+)
+
+def _droid_all_deps_impl(ctx):
+    _log("=== droid_all_deps {}".format(ctx.label))
+    return [
+        DroidAllDepsInfo(
+            all_deps=ctx.attr.all_deps,
+        ),
+    ]
+
+droid_all_deps = rule(
+    implementation = _droid_all_deps_impl,
+    attrs = {
+        "all_deps": attr.label_list(
+            doc = ("All dependencies information of multi_lib target. Required to be able to propogate android_library deps to android_binary through cc_library."),
+        ),
+    },
+)
+
+##########################################
 DroidDefaultAppManifestInfo = provider(
     "Provides the default Android manifest file from dependencies for multi_app.",
     fields = {
@@ -33,6 +58,15 @@ droid_default_app_manifest = rule(
 )
 
 ##########################################
+def _droid_all_deps_aspect_impl(target, ctx):
+    _log("=== droid_all_deps_aspect {}".format(target))
+
+_droid_all_deps_aspect = aspect(
+    implementation = _droid_all_deps_aspect_impl,
+    attr_aspects = ["deps"],  # traverse by "deps" attributes
+)
+
+##########################################
 def _droid_default_app_manifest_aspect_impl(target, ctx):
     _log("=== droid_default_app_manifest_aspect {}".format(target))
 
@@ -47,12 +81,18 @@ def _droid_default_app_manifest_aspect_impl(target, ctx):
                 _log("  FOUND (in data)", found_default_app_manifest)
                 break
     
-    # Second pass: if not found in data, check transitive deps (lower priority)
+    # Second pass: if not found in data, check transitive attributes (lower priority)
     if not found_default_app_manifest and hasattr(ctx.rule.attr, "deps"):
         for dep in ctx.rule.attr.deps:
             if DroidDefaultAppManifestInfo in dep:
                 found_default_app_manifest = dep[DroidDefaultAppManifestInfo]
                 _log("  FOUND (in deps)", found_default_app_manifest)
+                break
+    if not found_default_app_manifest and hasattr(ctx.rule.attr, "exports"):
+        for dep in ctx.rule.attr.exports:
+            if DroidDefaultAppManifestInfo in dep:
+                found_default_app_manifest = dep[DroidDefaultAppManifestInfo]
+                _log("  FOUND (in exports)", found_default_app_manifest)
                 break
 
     if found_default_app_manifest:
@@ -62,7 +102,7 @@ def _droid_default_app_manifest_aspect_impl(target, ctx):
 
 _droid_default_app_manifest_aspect = aspect(
     implementation = _droid_default_app_manifest_aspect_impl,
-    attr_aspects = ["deps"],  # traverse by "deps" attribute
+    attr_aspects = ["deps", "exports"],  # traverse by "deps" and "exports" attributes
     # required_providers = [CcInfo, JavaInfo],  # only apply to some targets (to filter out another deps that are not relevant)
 )
 

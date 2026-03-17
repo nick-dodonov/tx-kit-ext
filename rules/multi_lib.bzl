@@ -18,6 +18,7 @@ load(
     "wasm_embedded_linkopts_params",
 )
 load(":cc_common.bzl", "cc_common")
+load(":droid_deps.bzl", "droid_all_deps")
 load(
     ":multi_common.bzl",
     "build_platform_select_dict",
@@ -34,7 +35,6 @@ def _multi_lib_impl(name, visibility, **kwargs):
     embedded_data = kwargs.pop("embedded_data", None)
 
     # Extract Android-specific attributes
-    droid_library = kwargs.pop("droid_library", False)
     droid_exports = kwargs.pop("droid_exports")
     droid_kwargs = multi_common.pop_droid_kwargs(kwargs)
 
@@ -104,31 +104,40 @@ def _multi_lib_impl(name, visibility, **kwargs):
         droid_name = "{}-droid".format(name)
         droid_tags = tags + ["droid"]
 
-        # Create android_library wrapper when explicitly requested via droid_library
-        if True: # or droid_library:
-            droid_cc_name = "{}.lib".format(droid_name)
-            cc_library(
-                name = droid_cc_name,
-                target_compatible_with = ["@platforms//os:android"],
-                visibility = ["//visibility:private"],
-                **kwargs
-            )
+        # All deps target allowing to provide android_library deps to android_binary in multi_app even via pure cc_library targets.
+        droid_all_deps(
+            name = "{}.droid_deps".format(droid_name),
+            target_compatible_with = ["@platforms//os:android"],
+            visibility = ["//visibility:private"],
+            all_deps = all_deps,
+        )
 
-            # if droid_kwargs["manifest"]:
-            #     droid_kwargs["exports_manifest"] = 1
-            # else:
-            #     droid_top_manifest(
-            #         name = "{}.manifest".format(droid_name),
-            #         target_compatible_with = ["@platforms//os:android"],
-            #         visibility = ["//visibility:private"],
-            #         deps = all_deps,
-            #         allow_empty = True,
-            #     )
-            #     droid_kwargs["manifest"] = ":{}.manifest".format(droid_name)
+        cc_kwargs = {k: v for k, v in kwargs.items()}
+        cc_data = cc_kwargs.pop("data") or [] + [":{}.droid_deps".format(droid_name)]  # Include custom deps provider to be traversable in android_binary deps closure
 
-            droid_deps = [":{}.lib".format(droid_name)] + all_deps
+        # Create cc_library target for Android platform. It will be wrapped by android_library with the same deps and additional Java sources, resources, etc.
+        droid_cc_name = "{}.lib".format(droid_name)
+        cc_library(
+            name = droid_cc_name,
+            target_compatible_with = ["@platforms//os:android"],
+            visibility = ["//visibility:private"],
+            data = cc_data,
+            **cc_kwargs
+        )
 
-            #TODO: add assets_dir to droid_embedded_assets rule allowing to setup it
+        # Create android_library target # TODO: if required
+        droid_deps = [":{}.lib".format(droid_name)] + all_deps
+
+        if not droid_kwargs.get("custom_package"):
+            custom_package = name.replace("-", "_")  # Android package names cannot contain hyphens (otherwise appt2 cannot generate R.java)
+            if custom_package == name:
+                droid_kwargs.pop("custom_package", None)
+            else:
+                #TODO: use pkg = native.package_name() for prefix?
+                droid_kwargs["custom_package"] = "org.tx." + custom_package
+
+        #TODO: add assets_dir to droid_embedded_assets rule allowing to setup it
+        if embedded_data:
             droid_kwargs["assets_dir"] = "assets"
             droid_embedded_assets(
                 name = "{}.assets".format(droid_name),
@@ -138,24 +147,15 @@ def _multi_lib_impl(name, visibility, **kwargs):
             )
             droid_kwargs["assets"] = [":{}.assets".format(droid_name)] + (droid_kwargs.get("assets") or [])
 
-            android_library(
-                name = droid_name,
-                tags = droid_tags,
-                target_compatible_with = ["@platforms//os:android"],
-                visibility = visibility,
-                deps = droid_deps,
-                exports = droid_exports,
-                **droid_kwargs
-            )
-        else:
-            # No Java sources: create cc_library with main name (backward compatible)
-            cc_library(
-                name = droid_name,
-                tags = droid_tags,
-                target_compatible_with = ["@platforms//os:android"],
-                visibility = visibility,
-                **kwargs
-            )
+        android_library(
+            name = droid_name,
+            tags = droid_tags,
+            target_compatible_with = ["@platforms//os:android"],
+            visibility = visibility,
+            deps = droid_deps,
+            exports = [":{}.lib".format(droid_name)] + droid_exports,
+            **droid_kwargs
+        )
 
     ################################################################
     # Alias selects variant based on current --platforms
@@ -171,11 +171,6 @@ multi_lib = macro(
     inherit_attrs = native.cc_library,
     implementation = _multi_lib_impl,
     attrs = multi_common.get_common_attrs() | {
-        "droid_library": attr.bool(
-            default = False,
-            configurable = False,
-            doc = "Set to True to create android_library wrapper for Android platform. Required when droid_* attributes are specified.",
-        ),
         "droid_exports": attr.label_list(
             providers = [
                 [CcInfo],
