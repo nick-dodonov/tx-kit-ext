@@ -26,6 +26,21 @@ load(
     "validate_platforms",
 )
 
+def _droid_default_custom_package(name, package_name):
+    # Default android_library behaviour w/o custom_package specified is to automatically resolve it depending on target's path,
+    #   it looks for "src", "java", "javatest" in parents (look external/rules_android+/rules/java.bzl).
+    # So it fails in android_library w/o custom_package specified for simple targets (i.e. demo/pkg/boot:sublib).
+    # Workaround it by defaulting to "tx.<target_name>" package which is valid and unique for each target
+    #   (it can be overridden by user via custom_package if needed)
+    
+    # Android package names cannot contain hyphens (otherwise appt2 cannot generate R.java)
+    # Android package must have a prefix (otherwise "attribute 'package' in <manifest> tag is not a valid Android package name: 'sublib'")
+    result = "tx.{}".format(name.replace("-", "_"))
+
+    # TODO: think to add target's package_name path as prefix
+    #print("{}:{} -> {}".format(package_name, name, result))
+    return result
+
 def _multi_lib_impl(name, visibility, **kwargs):
     # multi_library manages target_compatible_with itself
     if kwargs.pop("target_compatible_with", None) != None:
@@ -129,12 +144,7 @@ def _multi_lib_impl(name, visibility, **kwargs):
         droid_deps = [":{}.lib".format(droid_name)] + all_deps
 
         if not droid_kwargs.get("custom_package"):
-            custom_package = name.replace("-", "_")  # Android package names cannot contain hyphens (otherwise appt2 cannot generate R.java)
-            if custom_package == name:
-                droid_kwargs.pop("custom_package", None)
-            else:
-                #TODO: use pkg = native.package_name() for prefix?
-                droid_kwargs["custom_package"] = "org.tx." + custom_package
+            droid_kwargs["custom_package"] = _droid_default_custom_package(name, native.package_name())
 
         #TODO: add assets_dir to droid_embedded_assets rule allowing to setup it
         if embedded_data:
