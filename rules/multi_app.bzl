@@ -201,18 +201,19 @@ def _multi_app_impl(name, visibility, **kwargs):
 
         # Add embedded data as assets
         droid_kwargs["assets_dir"] = "assets"
-        droid_embedded_assets(
-            name = "{}.assets".format(droid_name),
-            target_compatible_with = ["@platforms//os:android"],
-            visibility = ["//visibility:private"],
-            embedded_data = embedded_data,
-        )
-        droid_kwargs["assets"] = [":{}.assets".format(droid_name)] + (droid_kwargs.get("assets") or [])
 
         droid_target_compatible_with = select({
             Label("//rules:multi_host_setting"): [],
             "//conditions:default": ["@platforms//os:android"],
         })
+
+        droid_embedded_assets(
+            name = "{}.assets".format(droid_name),
+            target_compatible_with = droid_target_compatible_with,
+            visibility = ["//visibility:private"],
+            embedded_data = embedded_data,
+        )
+        droid_kwargs["assets"] = [":{}.assets".format(droid_name)] + (droid_kwargs.get("assets") or [])
 
         droid_apk_name = "{}-apk".format(droid_name)
         android_binary(
