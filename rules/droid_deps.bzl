@@ -1,6 +1,7 @@
 load(
     "@rules_android//rules:android_split_transition.bzl",
-    "android_split_transition",
+    ## "android_split_transition",
+    "android_transition",
 )
 load("//rules:log.bzl", "log")
 
@@ -27,6 +28,7 @@ droid_all_deps = rule(
     attrs = {
         "all_deps": attr.label_list(
             doc = ("All dependencies information of multi_lib target. Required to be able to propogate android_library deps to android_binary through cc_library."),
+            cfg = android_transition,
         ),
     },
 )
@@ -131,7 +133,7 @@ droid_select_default_app_manifest = rule(
     attrs = {
         "search_deps": attr.label_list(
             mandatory = True,
-            cfg = android_split_transition,  # TODO: maybe simple android_transition instead?
+            cfg = android_transition, ## android_split_transition,  # TODO: maybe simple android_transition instead?
             aspects = [_droid_default_app_manifest_aspect],
         ),
     },

@@ -51,6 +51,7 @@ cc_deps_filter = rule(
         "deps": attr.label_list(
             mandatory = True,
             doc = "Mixed dependencies to filter cc_library and android_library deps from.",
+            cfg = "target",
         ),
     },
     provides = [CcInfo],

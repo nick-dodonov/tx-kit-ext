@@ -20,6 +20,7 @@ cc_library(
         "-Wl,--undefined=ANativeActivity_onCreate",
     ],
     strip_include_prefix = "src/cpp",
+    target_compatible_with = ["@platforms//os:android"],
     visibility = ["//visibility:public"],
 )
 
@@ -32,6 +33,7 @@ android_library(
     name = "droid_glue",
     srcs = glob(["src/java/**/*.java"]),
     data = [":droid_default_app_manifest"],
+    target_compatible_with = ["@platforms//os:android"],
     visibility = ["//visibility:public"],
     deps = [":droid_native"],
 )

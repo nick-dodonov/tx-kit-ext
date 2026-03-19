@@ -180,6 +180,7 @@ def _multi_app_impl(name, visibility, **kwargs):
         droid_lib_kwargs = {k: v for k, v in kwargs.items() if k not in droid_lib_exclude}
         cc_library(
             name = "{}.lib".format(droid_name),
+            tags = ["manual"],  # See comment in multi_lib: prevent //... from matching this intermediate target
             target_compatible_with = ["@platforms//os:android"],
             visibility = ["//visibility:private"],
             alwayslink = is_test,  # Prevent linker from stripping test registration code

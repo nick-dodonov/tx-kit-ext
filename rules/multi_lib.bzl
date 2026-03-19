@@ -116,12 +116,20 @@ def _multi_lib_impl(name, visibility, **kwargs):
     ################################################################
     # Droid (Android NDK)
     if "droid" in enabled_platforms:
+        # Tagged "manual" to prevent //... wildcard from picking it up as a standalone top-level target.
+        # Without this, hedron_compile_commands generates duplicate entries for the same source files:
+        # android_binary applies android_split_transition to its deps, creating a post-transition config
+        # (e.g. darwin_arm64-dbg-android-ST-...), but //... also matches this cc_library directly in the
+        # pre-transition config (darwin_arm64-dbg), resulting in two CppCompile actions for each .cc file.
+        # The "manual" tag excludes it from //... while android_binary still correctly pulls it via deps.
+
         droid_name = "{}-droid".format(name)
         droid_tags = tags + ["droid"]
 
         # All deps target allowing to provide android_library deps to android_binary in multi_app even via pure cc_library targets.
         droid_all_deps(
             name = "{}.droid_deps".format(droid_name),
+            tags = ["manual"],  # See comment above: prevent //... from matching this intermediate target
             target_compatible_with = ["@platforms//os:android"],
             visibility = ["//visibility:private"],
             all_deps = all_deps,
@@ -134,6 +142,7 @@ def _multi_lib_impl(name, visibility, **kwargs):
         droid_cc_name = "{}.lib".format(droid_name)
         cc_library(
             name = droid_cc_name,
+            tags = ["manual"],  # See comment above: prevent //... from matching this intermediate target
             target_compatible_with = ["@platforms//os:android"],
             visibility = ["//visibility:private"],
             data = cc_data,
@@ -159,7 +168,7 @@ def _multi_lib_impl(name, visibility, **kwargs):
 
         android_library(
             name = droid_name,
-            tags = droid_tags,
+            tags = droid_tags + ["manual"],  # See comment above: prevent //... from matching this intermediate target
             target_compatible_with = ["@platforms//os:android"],
             visibility = visibility,
             deps = droid_deps,
@@ -168,11 +177,12 @@ def _multi_lib_impl(name, visibility, **kwargs):
         )
 
     ################################################################
-    # Alias selects variant based on current --platforms
+    # Alias selects variant based on current --platforms.
     select_dict = build_platform_select_dict(name, enabled_platforms)
     native.alias(
         name = name,
         actual = select(select_dict),
+        tags = tags + ["manual"],  # See comment above: prevent //... from matching this intermediate target
         visibility = visibility,
     )
 

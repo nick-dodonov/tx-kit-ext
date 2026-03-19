@@ -131,6 +131,7 @@ def _get_cc_deps(name, all_deps):
         cc_deps_filter_name = "{}.cc_deps".format(name)
         cc_deps_filter(
             name = cc_deps_filter_name,
+            tags = ["manual"],  # Prevent //... from analyzing this as a standalone target (see multi_lib.bzl comment)
             deps = all_deps,
         )
         return [":{}".format(cc_deps_filter_name)]
