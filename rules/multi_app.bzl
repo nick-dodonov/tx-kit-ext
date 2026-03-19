@@ -23,7 +23,7 @@ load(
 load(":run_wrapper_cmd.bzl", "run_wrapper_cmd")
 
 # Android library to wrap execution of cc_library, allowing to declare simple main() function in C++ app
-_DROID_GLUE_LIB = Label("//rules/droid:droid_glue")
+_DROID_GLUE_LIB = Label("//pkg/droid:droid_glue")
 
 # Common attributes shared between multi_app and multi_test
 _COMMON_ATTRS = multi_common.get_common_attrs() | {

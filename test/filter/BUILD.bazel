@@ -5,7 +5,7 @@ android_library(
     name = "derived",
     manifest = "DerivedAndroidManifest.xml",
     deps = [
-        "//rules/droid:droid_glue",
+        "//pkg/droid:droid_glue",
     ],
 )
 
@@ -13,6 +13,6 @@ droid_top_manifest(
     name = "top_manifest",
     deps = [
         ":derived",  # dependency with 2 manifests
-        "//rules/droid:droid_native",  # dependency without manifests
+        "//pkg/droid:droid_native",  # dependency without manifests
     ],
 )

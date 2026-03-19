@@ -6,8 +6,10 @@ exports_files([
     "template.AndroidManifest.xml",
 ])
 
-# Native bridge library is implemented with androidndk native_app_glue
-#   android_main() -> main() for reusing standard binary entry point.
+# Default native bridge library to maintain standard main() entry point is implemented with libandroid.
+# NOTE:
+#   NDK also provides "high-level" native_app_glue library (@androidndk//:native_app_glue) requiring android_main().
+#   But it has issues with destroy processing, so almost all its features are self-implemented in droid_glue.
 cc_library(
     name = "droid_native",
     srcs = glob(["src/cpp/**/*.cc"]),
@@ -17,11 +19,8 @@ cc_library(
         "-landroid",
         "-Wl,--undefined=ANativeActivity_onCreate",
     ],
+    strip_include_prefix = "src/cpp",
     visibility = ["//visibility:public"],
-    deps = [
-        # DISABLED: in favor of self-implemented droid_glue.cc (TODO: remove when everything useful in native_app_glue will be known)
-        # "@androidndk//:native_app_glue"
-    ],
 )
 
 droid_default_app_manifest(
@@ -31,7 +30,7 @@ droid_default_app_manifest(
 
 android_library(
     name = "droid_glue",
-    srcs = ["src/java/tx/DroidActivity.java"],
+    srcs = glob(["src/java/**/*.java"]),
     data = [":droid_default_app_manifest"],
     visibility = ["//visibility:public"],
     deps = [":droid_native"],
