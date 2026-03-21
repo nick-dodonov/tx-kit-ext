@@ -47,7 +47,7 @@ log = logging.getLogger(__name__)
 
 _aapt_path = "/Users/rix/Library/Android/sdk/build-tools/36.0.0/aapt2"
 _aapt_badging_path = "/Users/rix/Library/Android/sdk/build-tools/36.0.0/aapt"
-_DEFAULT_TIMEOUT = 5
+_DEFAULT_TIMEOUT = 0
 _TX_ARGV_EXTRA = "tx.argv"
 _LAUNCHABLE_ACTIVITY_RE = re.compile(r"launchable-activity: name='([^']+)'")
 _DEFAULT_TAIL_SECONDS = 0.1
@@ -217,18 +217,24 @@ class DroidCommand(Command):
         self.app_pid = None
         event_queue: asyncio.Queue[LogEvent | ExitEvent] = asyncio.Queue()
 
-        app_proc = await _run_asyncio([
-                "adb",
-                "logcat",
-                f"--uid={self.uid}",
-                "-v", "color",
-                "-v", "usec",
-                "-v", "uid",
-                "-T1",
-            ],
+        app_logcat_cmd = [
+            "adb",
+            "logcat",
+            f"--uid={self.uid}",
+            "-v", "color",
+            "-v", "usec",
+            "-v", "uid",
+            "-T1",
+        ]
+        if not log.isEnabledFor(logging.DEBUG):
+            # default suppress spam as "D EGL_emulation: app_time_stats: avg=1.11ms min=0.69ms max=3.75ms count=62"
+            app_logcat_cmd += ["*:V", "EGL_emulation:I"]
+        app_proc = await _run_asyncio(
+            app_logcat_cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT,
         )
+
         system_proc = await _run_asyncio([
                 "adb",
                 "logcat",
@@ -266,6 +272,9 @@ class DroidCommand(Command):
                 proc.terminate()
 
         async def emit_timeout_event() -> None:
+            if self.timeout <= 0:
+                await asyncio.get_event_loop().create_future()  # Wait forever (no timeout)
+                return
             await asyncio.sleep(self.timeout)
             await event_queue.put(ExitEvent(ExitReason.TIMEOUT, f"{self.timeout}s timeout reached"))
 

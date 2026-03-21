@@ -20,6 +20,8 @@ public class DroidActivity extends NativeActivity {
     protected void onDestroy() {
         Log.v(TAG, "onDestroy");
         super.onDestroy();
+
+        //TODO: configurable: required for current droid.py runner implementation to detect finish now
         System.exit(exitCode);
     }
 
