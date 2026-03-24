@@ -181,7 +181,6 @@ def _multi_app_impl(name, visibility, **kwargs):
         cc_library(
             name = "{}.lib".format(droid_name),
             tags = ["manual"],  # See comment in multi_lib: prevent //... from matching this intermediate target
-            target_compatible_with = ["@platforms//os:android"],
             visibility = ["//visibility:private"],
             alwayslink = is_test,  # Prevent linker from stripping test registration code
             **droid_lib_kwargs
@@ -194,7 +193,7 @@ def _multi_app_impl(name, visibility, **kwargs):
         if droid_kwargs["manifest"] == None:
             droid_select_default_app_manifest(
                 name = "{}.manifest".format(droid_name),
-                target_compatible_with = ["@platforms//os:android"],
+                tags = ["manual"],  # See comment in multi_lib: prevent //... from matching this intermediate target
                 visibility = ["//visibility:private"],
                 search_deps = droid_deps,
             )
