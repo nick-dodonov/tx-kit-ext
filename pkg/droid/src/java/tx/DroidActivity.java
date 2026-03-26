@@ -6,7 +6,7 @@ import android.os.Bundle;
 import android.util.Log;
 
 public class DroidActivity extends NativeActivity {
-    final String TAG = "droid.A";
+    final String TAG = "glue.A";
 
     private int exitCode = 128; // default to signal 128 for unknown exit code
 
@@ -20,6 +20,8 @@ public class DroidActivity extends NativeActivity {
     protected void onDestroy() {
         Log.v(TAG, "onDestroy");
         super.onDestroy();
+
+        //TODO: configurable: required for current droid.py runner implementation to detect finish now
         System.exit(exitCode);
     }
 

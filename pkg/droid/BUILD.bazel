@@ -1,0 +1,38 @@
+load("@rules_android//rules:rules.bzl", "android_library")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("//rules:droid_deps.bzl", "droid_default_app_manifest")
+
+exports_files([
+    "template.AndroidManifest.xml",
+])
+
+# Default native bridge library to maintain standard main() entry point is implemented with libandroid.
+# NOTE:
+#   NDK also provides "high-level" native_app_glue library (@androidndk//:native_app_glue) requiring android_main().
+#   But it has issues with destroy processing, so almost all its features are self-implemented in droid_glue.
+cc_library(
+    name = "droid_native",
+    srcs = glob(["src/cpp/**/*.cc"]),
+    hdrs = glob(["src/cpp/**/*.h"]),
+    linkopts = [
+        "-llog",
+        "-landroid",
+        "-Wl,--undefined=ANativeActivity_onCreate",
+    ],
+    strip_include_prefix = "src/cpp",
+    tags = ["manual"],  # See comment in multi_lib: prevent //... from matching this intermediate target
+    visibility = ["//visibility:public"],
+)
+
+droid_default_app_manifest(
+    name = "droid_default_app_manifest",
+    default_app_manifest = ":template.AndroidManifest.xml",
+)
+
+android_library(
+    name = "droid_glue",
+    srcs = glob(["src/java/**/*.java"]),
+    data = [":droid_default_app_manifest"],
+    visibility = ["//visibility:public"],
+    deps = [":droid_native"],
+)

@@ -30,12 +30,14 @@ from __future__ import annotations
 import argparse
 import asyncio
 import logging
+import os
 import re
 import shlex
 import subprocess
 import sys
 from dataclasses import dataclass
 from enum import Enum
+from functools import cache
 from pathlib import Path
 
 from colorama import Style
@@ -45,9 +47,7 @@ from .cmd import Command
 log = logging.getLogger(__name__)
 
 
-_aapt_path = "/Users/rix/Library/Android/sdk/build-tools/36.0.0/aapt2"
-_aapt_badging_path = "/Users/rix/Library/Android/sdk/build-tools/36.0.0/aapt"
-_DEFAULT_TIMEOUT = 5
+_DEFAULT_TIMEOUT = 0
 _TX_ARGV_EXTRA = "tx.argv"
 _LAUNCHABLE_ACTIVITY_RE = re.compile(r"launchable-activity: name='([^']+)'")
 _DEFAULT_TAIL_SECONDS = 0.1
@@ -61,6 +61,40 @@ _APP_LOG_PID_RE = re.compile(r"\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\.\d+\s+\d+\s+(\d+
 _START_PROC_RE = re.compile(r"Start proc (\d+):(.+)/", re.IGNORECASE)  # 03-01 18:52:29.862054  1000   586   623 I ActivityManager: Start proc 19859:com.tx/u0a153 for next-top-activity {com.tx/tx.DroidActivity}
 _PROCESS_EXITED_CLEANLY_RE = re.compile(r"Process (\d+) exited cleanly \((\d+)\)", re.IGNORECASE)
 _PROCESS_EXITED_SIGNAL_RE = re.compile(r"Process (\d+) exited due to signal (\d+)", re.IGNORECASE)
+
+
+@cache
+def _get_build_tools_dir() -> Path:
+    """Find the latest Android build-tools directory using ANDROID_HOME."""
+    android_home = os.environ.get("ANDROID_HOME")
+    if not android_home:
+        raise EnvironmentError("ANDROID_HOME environment variable is not set")
+    build_tools_dir = Path(android_home) / "build-tools"
+    if not build_tools_dir.is_dir():
+        raise FileNotFoundError(f"build-tools directory not found: {build_tools_dir}")
+    versions = [d for d in build_tools_dir.iterdir() if d.is_dir()]
+    if not versions:
+        raise FileNotFoundError(f"No build-tools versions found in {build_tools_dir}")
+
+    def _version_key(p: Path) -> tuple[int, ...]:
+        try:
+            return tuple(int(x) for x in p.name.split("."))
+        except ValueError:
+            return (0,)
+
+    latest = max(versions, key=_version_key)
+    log.debug(f"Using build-tools: {latest}")
+    return latest
+
+
+def _get_aapt2_path() -> str:
+    """Return path to aapt2 from the latest build-tools."""
+    return str(_get_build_tools_dir() / "aapt2")
+
+
+def _get_aapt_path() -> str:
+    """Return path to aapt from the latest build-tools."""
+    return str(_get_build_tools_dir() / "aapt")
 
 
 class ExitReason(Enum):
@@ -130,7 +164,7 @@ async def _run_asyncio(cmd: list[str] | str, **kwargs) -> asyncio.subprocess.Pro
 def _get_launcher_activity(apk_path: Path) -> str:
     """Get launchable activity name from APK via aapt dump badging."""
     result = _run(
-        [_aapt_badging_path, "dump", "badging", str(apk_path)],
+        [_get_aapt_path(), "dump", "badging", str(apk_path)],
         check=True,
         capture_output=True,
         text=True,
@@ -156,7 +190,7 @@ class DroidCommand(Command):
         self.timeout = timeout
 
         # Get package name from APK
-        result = _run([_aapt_path, "dump", "packagename", str(apk_path)], check=True, capture_output=True, text=True)
+        result = _run([_get_aapt2_path(), "dump", "packagename", str(apk_path)], check=True, capture_output=True, text=True)
         package_name = result.stdout.strip()
         log.debug(f"package: {package_name}")
         self.package_name = package_name
@@ -217,18 +251,24 @@ class DroidCommand(Command):
         self.app_pid = None
         event_queue: asyncio.Queue[LogEvent | ExitEvent] = asyncio.Queue()
 
-        app_proc = await _run_asyncio([
-                "adb",
-                "logcat",
-                f"--uid={self.uid}",
-                "-v", "color",
-                "-v", "usec",
-                "-v", "uid",
-                "-T1",
-            ],
+        app_logcat_cmd = [
+            "adb",
+            "logcat",
+            f"--uid={self.uid}",
+            "-v", "color",
+            "-v", "usec",
+            "-v", "uid",
+            "-T1",
+        ]
+        if not log.isEnabledFor(logging.DEBUG):
+            # default suppress spam as "D EGL_emulation: app_time_stats: avg=1.11ms min=0.69ms max=3.75ms count=62"
+            app_logcat_cmd += ["*:V", "EGL_emulation:I"]
+        app_proc = await _run_asyncio(
+            app_logcat_cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT,
         )
+
         system_proc = await _run_asyncio([
                 "adb",
                 "logcat",
@@ -266,6 +306,9 @@ class DroidCommand(Command):
                 proc.terminate()
 
         async def emit_timeout_event() -> None:
+            if self.timeout <= 0:
+                await asyncio.get_event_loop().create_future()  # Wait forever (no timeout)
+                return
             await asyncio.sleep(self.timeout)
             await event_queue.put(ExitEvent(ExitReason.TIMEOUT, f"{self.timeout}s timeout reached"))
 

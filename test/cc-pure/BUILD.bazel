@@ -4,16 +4,12 @@ cc_library(
     name = "lib",
     srcs = ["lib.cc"],
     data = ["data.txt"],
-    visibility = [
-        "//visibility:public",
-    ],
+    visibility = ["//visibility:public"],
 )
 
 cc_binary(
     name = "bin",
     srcs = ["bin.cc"],
-    visibility = [
-        "//visibility:public",
-    ],
+    visibility = ["//visibility:public"],
     deps = [":lib"],
 )

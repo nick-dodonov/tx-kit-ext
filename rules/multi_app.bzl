@@ -13,7 +13,7 @@ load(
     "host_embedded_data",
     "wasm_embedded_linkopts_params",
 )
-load(":filter_deps.bzl", "droid_top_manifest")
+load(":droid_deps.bzl", "droid_select_default_app_manifest")
 load(
     ":multi_common.bzl",
     "build_platform_select_dict",
@@ -23,7 +23,7 @@ load(
 load(":run_wrapper_cmd.bzl", "run_wrapper_cmd")
 
 # Android library to wrap execution of cc_library, allowing to declare simple main() function in C++ app
-_DROID_GLUE_LIB = Label("//rules/droid:droid_glue")
+_DROID_GLUE_LIB = Label("//pkg/droid:droid_glue")
 
 # Common attributes shared between multi_app and multi_test
 _COMMON_ATTRS = multi_common.get_common_attrs() | {
@@ -180,7 +180,7 @@ def _multi_app_impl(name, visibility, **kwargs):
         droid_lib_kwargs = {k: v for k, v in kwargs.items() if k not in droid_lib_exclude}
         cc_library(
             name = "{}.lib".format(droid_name),
-            target_compatible_with = ["@platforms//os:android"],
+            tags = ["manual"],  # See comment in multi_lib: prevent //... from matching this intermediate target
             visibility = ["//visibility:private"],
             alwayslink = is_test,  # Prevent linker from stripping test registration code
             **droid_lib_kwargs
@@ -191,28 +191,29 @@ def _multi_app_impl(name, visibility, **kwargs):
         # If no custom manifest provided - use topmost manifest from dependencies:
         # So it defaults to AndroidManifest.xml from droid_glue library, but can also be overridden in another deps
         if droid_kwargs["manifest"] == None:
-            droid_top_manifest(
+            droid_select_default_app_manifest(
                 name = "{}.manifest".format(droid_name),
-                target_compatible_with = ["@platforms//os:android"],
+                tags = ["manual"],  # See comment in multi_lib: prevent //... from matching this intermediate target
                 visibility = ["//visibility:private"],
-                deps = droid_deps,
+                search_deps = droid_deps,
             )
             droid_kwargs["manifest"] = ":{}.manifest".format(droid_name)
 
         # Add embedded data as assets
         droid_kwargs["assets_dir"] = "assets"
-        droid_embedded_assets(
-            name = "{}.assets".format(droid_name),
-            target_compatible_with = ["@platforms//os:android"],
-            visibility = ["//visibility:private"],
-            embedded_data = embedded_data,
-        )
-        droid_kwargs["assets"] = [":{}.assets".format(droid_name)] + (droid_kwargs.get("assets") or [])
 
         droid_target_compatible_with = select({
             Label("//rules:multi_host_setting"): [],
             "//conditions:default": ["@platforms//os:android"],
         })
+
+        droid_embedded_assets(
+            name = "{}.assets".format(droid_name),
+            target_compatible_with = droid_target_compatible_with,
+            visibility = ["//visibility:private"],
+            embedded_data = embedded_data,
+        )
+        droid_kwargs["assets"] = [":{}.assets".format(droid_name)] + (droid_kwargs.get("assets") or [])
 
         droid_apk_name = "{}-apk".format(droid_name)
         android_binary(

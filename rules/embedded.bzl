@@ -10,14 +10,9 @@ Embedded files usage:
 - wasm_embedded_linkopts_params - depends on embedded_files and generates a parameter file to be used in linkopts for emcc --preload-file options for wasm cc_binary targets
 """
 load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")
+load(":log.bzl", "log")
 
-_LOG_ENABLED = False
-def _log(message):
-    """Logs a warning message during the build."""
-    if _LOG_ENABLED:
-        _LOG_COLOR = "\033[1;34m"  # blue
-        _LOG_RESET = "\033[0m"
-        print(_LOG_COLOR + message + _LOG_RESET)  # buildifier: disable=print
+_log = log.info(0)
 
 ################################################################
 EmbeddedFilesInfo = provider(
