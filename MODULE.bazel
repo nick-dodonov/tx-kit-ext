@@ -31,11 +31,23 @@ bazel_dep(name = "googletest", version = "1.17.0.bcr.2", dev_dependency = True)
 ################################################################
 # WASM / Emscripten build support
 ################################################################
-bazel_dep(name = "emsdk", version = "4.0.17-tx.1")
+bazel_dep(name = "emsdk", version = "5.0.4")
 # TODO: find the way for local emsdk toolchain via .bazelrc config/overrides (same as w/ make/cmake/ninja/pkg_config/etc)
 # use_extension("@emsdk//bazel:extensions.bzl", "emsdk_extension").configure(
 #   emsdk_dir = "/Users/nik/emsdk",
 #   enable_override = True,
+# )
+# local_repository(
+#     name = "emsdk",
+#     path = "/Users/nik/p/t/tx/ext/emsdk/bazel",
+# )
+# emsdk - fixed 5.0.4 version (latest main changes w/o warnings and cmake issue)
+# git_override(
+#     module_name = "emsdk",
+#     commit = "a491c4092412c9c12d26c572fd2e7ac792e8b733",  # tx/5.0.4
+#     remote = "https://github.com/nick-dodonov/emsdk.git",
+#     strip_prefix = "bazel",
+#     # verbose = True,
 # )
 
 # TODO: ?? Don't need it ?? # Configure emscripten deps extension to download and register toolchains
@@ -101,7 +113,7 @@ android_ndk_repository_extension = use_extension(
 )
 # android_ndk_repository_extension.configure(
 #     # Optional (otherwise ANDROID_NDK_HOME)
-#     path = "/Users/rix/Library/Android/sdk/ndk/29.0.14206865",
+#     path = "/Users/nik/Library/Android/sdk/ndk/29.0.14206865",
 #     # Optional (ctx.attr.api_level or 31 in rules.bzl)
 #     api_level = 31
 # )
