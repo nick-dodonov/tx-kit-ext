@@ -97,6 +97,18 @@ def _get_aapt_path() -> str:
     return str(_get_build_tools_dir() / "aapt")
 
 
+@cache
+def _get_adb_path() -> str:
+    """Return path to adb from ANDROID_HOME/platform-tools."""
+    android_home = os.environ.get("ANDROID_HOME")
+    if not android_home:
+        raise EnvironmentError("ANDROID_HOME environment variable is not set")
+    adb = Path(android_home) / "platform-tools" / "adb"
+    if not adb.is_file():
+        raise FileNotFoundError(f"adb not found: {adb}")
+    return str(adb)
+
+
 class ExitReason(Enum):
     """Reason for run termination."""
 
@@ -205,8 +217,8 @@ class DroidCommand(Command):
         return asyncio.run(self._execute_async())
 
     async def _execute_async(self) -> int:
-        await _run_async(["adb", "shell", "am", "force-stop", self.package_name], check=True)
-        await _run_async(["adb", "install", str(self.apk_path)], check=True)
+        await _run_async([_get_adb_path(), "shell", "am", "force-stop", self.package_name], check=True)
+        await _run_async([_get_adb_path(), "install", str(self.apk_path)], check=True)
 
         self.uid = self._get_package_uid(self.package_name)
         log.debug(f"UID {self.uid} for package {self.package_name}")
@@ -216,14 +228,14 @@ class DroidCommand(Command):
             exit_event = await self._run_app_and_handle_logs()
             return exit_event.take_exit_code()
         finally:
-            #await _run_async(["adb", "shell", "am", "force-stop", self.package_name], check=True)
+            #await _run_async([_get_adb_path(), "shell", "am", "force-stop", self.package_name], check=True)
             pass
 
     @staticmethod
     def _get_package_uid(package_name: str) -> str:
         """Get UID of installed package from pm list. Raises ValueError if not found."""
         result = _run(
-            ["adb", "shell", "pm", "list", "package", "-U", package_name],
+            [_get_adb_path(), "shell", "pm", "list", "package", "-U", package_name],
             check=True,
             capture_output=True,
             text=True,
@@ -240,9 +252,9 @@ class DroidCommand(Command):
             args_str = " ".join(self.args)
             # Pass as single shell string so "foo bar" survives device shell parsing
             am_cmd = f"am start -n {self.component} --es {_TX_ARGV_EXTRA} {shlex.quote(args_str)}"
-            cmd = ["adb", "shell", am_cmd]
+            cmd = [_get_adb_path(), "shell", am_cmd]
         else:
-            cmd = ["adb", "shell", "am", "start", "-n", self.component]
+            cmd = [_get_adb_path(), "shell", "am", "start", "-n", self.component]
         log.debug(f"am start: component={self.component}, args={self.args}")
         _run(cmd, check=True, capture_output=True, text=True)
 
@@ -252,7 +264,7 @@ class DroidCommand(Command):
         event_queue: asyncio.Queue[LogEvent | ExitEvent] = asyncio.Queue()
 
         app_logcat_cmd = [
-            "adb",
+            _get_adb_path(),
             "logcat",
             f"--uid={self.uid}",
             "-v", "color",
@@ -270,7 +282,7 @@ class DroidCommand(Command):
         )
 
         system_proc = await _run_asyncio([
-                "adb",
+                _get_adb_path(),
                 "logcat",
                 f"--uid={self.uid},1000,0",
                 "-v", "color",

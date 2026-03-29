@@ -69,9 +69,21 @@ class LogFormatter(logging.Formatter):
         return s
 
 
+def _supports_color() -> bool:
+    """Return True if stdout supports ANSI color escape codes."""
+    import os
+    if os.environ.get("NO_COLOR"):
+        return False
+    if os.environ.get("FORCE_COLOR"):
+        return True
+    if os.environ.get("TERM") == "dumb":
+        return False
+    return sys.stdout.isatty()
+
+
 def setup_logging(verbose: bool = False, show_time: bool = False) -> None:
     level = logging.DEBUG if verbose else logging.INFO
-    isatty = sys.stdout.isatty()
+    isatty = _supports_color()
     if show_time:
         fmt = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
     elif verbose:
