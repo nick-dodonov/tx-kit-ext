@@ -18,11 +18,17 @@ class Finder:
         if file.exists():
             return file, "CWD"
 
-        build_working_dir = os.environ.get("BUILD_WORKING_DIRECTORY")
-        if build_working_dir:
-            candidate = Path(build_working_dir) / file
-            if candidate.exists():
-                return candidate, "BUILD_WORKING_DIRECTORY"
+        env_keys = [
+            "BUILD_WORKING_DIRECTORY",
+            "BUILD_WORKSPACE_DIRECTORY",
+        ]
+
+        for env_key in env_keys:
+            env_dir = os.environ.get(env_key)
+            if env_dir:
+                candidate = Path(env_dir) / file
+                if candidate.exists():
+                    return candidate, env_key
 
         # Try runfiles
         if self.runfiles:

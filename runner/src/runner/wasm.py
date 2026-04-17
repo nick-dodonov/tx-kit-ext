@@ -44,7 +44,7 @@ def _parse_env_file(env_file: Path) -> list[str]:
     try:
         with open(env_file, 'r') as f:
             content = f.read()
-            log.debug(f"content: {content.strip()}")
+            log.debug(f"env content: {content.strip()}")
 
             # Parse WASM_RUNNER_ARGS variable
             args = []
@@ -69,7 +69,7 @@ def _parse_env_file(env_file: Path) -> list[str]:
             return args
 
     except Exception as e:
-        log.error(f"❌ Failed reading/parsing: {e}")
+        log.error(f"❌ Failed reading/parsing .env file: {e}")
         return []
 
 
@@ -79,7 +79,7 @@ def _read_env_file(ctx: Context) -> list[str]:
     env_path = Path(ctx.options.file).with_name('.env')
     found_path, found_in = ctx.finder.find_file(env_path)
     if found_path:
-        log.debug(f"Found: {found_path} # {found_in}")
+        log.debug(f"env found: {found_path} # {found_in}")
         return _parse_env_file(found_path)
     return []
 
