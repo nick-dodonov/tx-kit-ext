@@ -15,7 +15,7 @@ module(
 #   for deterministic build and simplifing debug setup.
 #   --features=oso_prefix_is_pwd seems doesn't works https://keith.github.io/xcode-man-pages/ld.1.html#oso_prefix
 #   can be replaced w/ other flags, e.g. --copt=-ffile-compilation-dir=. --linkopt=-Wl,-oso_prefix,
-bazel_dep(name = "apple_support", version = "2.2.0")
+bazel_dep(name = "apple_support", version = "2.5.3")
 bazel_dep(name = "platforms", version = "1.0.0")
 bazel_dep(name = "rules_cc", version = "0.2.16")
 bazel_dep(name = "rules_foreign_cc", version = "0.15.1")
